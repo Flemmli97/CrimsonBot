@@ -1,0 +1,63 @@
+# Name of the bot. ATM only used in logging
+# Use the discord dev portal to change the actual name of your app/bot
+name: "CrimsonBot"
+
+# The token of your bot. This is required!
+bot_token: ""
+
+# Level for console log messages
+logging_level: "INFO"
+
+# The channel where chat log messages will be sent to
+log_channel: ""
+
+# Module of linking your minecraft account with your discord account
+minecraft_linker:
+
+  # Users to ignore during syncing
+  ignored_users:
+    - "dc3b6b2a-b7a4-493b-b807-a8ca62dd3c7d" # Flemmli97
+
+  # Syncing does not support multiple server due to syncing to a gist
+  # The server where this module should be enabled
+  required_server: ""
+
+  # The github token for syncing that can write to the gist
+  github_token: ""
+
+  # Id of the gist file to sync to
+  gist_id: ""
+
+  # Name of the gist file to sync to
+  gist_file: ""
+
+# Module for the paste file handling
+paste:
+
+  # URL for the paste api
+  paste_site_api: "https://blazing-coop.net/paste"
+
+  # URL for the main paste site. This will be used to build the file link
+  paste_site: "https://blazing-coop.net"
+
+  # File extension that will be handled and uploaded
+  allowed_files:
+    - ".txt"
+    - ".json"
+    - ".toml"
+    - ".log"
+
+wiki:
+
+  # URL of the wiki
+  url:
+
+  # The API for searching through the wiki
+  # ATM only supports typesense searches
+  search:
+    api_key: ""
+    host: ""
+    port:
+    protocol: ""
+    path: ""
+    collection: ""

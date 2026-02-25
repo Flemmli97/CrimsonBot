@@ -1,0 +1,12 @@
+.env
+data
+
+# python
+__pycache__
+/env
+
+# VSCode
+.vscode
+
+# IDEA
+.idea

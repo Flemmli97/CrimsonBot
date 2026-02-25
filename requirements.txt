@@ -1,0 +1,7 @@
+discord.py==2.6.4
+requests
+aiosqlite
+ruamel-yaml
+pydantic
+typesense
+beautifulsoup4
