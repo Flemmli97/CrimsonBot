@@ -99,6 +99,7 @@ class Wiki(commands.Cog):
             If top level already returns result we only return them. Otherwise try for next level anchors before searching all contents
         '''
         tag = self.parse_mod_data(mod)
+        await interaction.response.defer()
         first = await self.run_search(query=query, tag=tag, type='lvl1')
         if await self.handle_result(interaction, query, mod, first):
             return
@@ -107,7 +108,7 @@ class Wiki(commands.Cog):
             return
         content = await self.run_search(query=query, tag=tag, type='content')
         if not await self.handle_result(interaction, query, mod, content, True):
-            await interaction.response.send_message(f"Nothing found for {query}!")
+            await interaction.followup.send(f"Nothing found for {query}!")
 
     @staticmethod
     def parse_mod_data(mod: Optional[str]):
@@ -152,7 +153,7 @@ class Wiki(commands.Cog):
                     url=url,
                     color=0x1A1897
                 )
-            await interaction.response.send_message(msg, embed=embed)
+            await interaction.followup.send(msg, embed=embed)
             return True
         msg = f'Found multiple matching pages: '
         description = ''
@@ -178,7 +179,7 @@ class Wiki(commands.Cog):
             if mod:
                 search_url += f'&p={mod}'
             embed.add_field(name='For more results see', value=search_url)
-        await interaction.response.send_message(msg, embed=embed)
+        await interaction.followup.send(msg, embed=embed)
         return True
 
     @staticmethod

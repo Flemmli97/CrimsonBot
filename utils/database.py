@@ -90,7 +90,7 @@ class BotDatabase:
         primary = ['guild_id']
         primary.extend(sql.keys)
         primary = ', '.join(primary)
-        table = f'{identifier.qualified_name}_{table}'
+        table = f'{identifier if type(identifier) is str else identifier.qualified_name}_{table}'
         op = dedent(f'''
         CREATE TABLE IF NOT EXISTS {table} (
             {sql.schema},
@@ -99,6 +99,18 @@ class BotDatabase:
         );''').lstrip()
         await self._connection.executescript(op)
         await self._connection.commit()
+
+        async def run(s: str):
+            return await self._connection.executescript(s)
+
+        updater = await schema.table_update(table, run)
+        if updater:
+            op = f'''
+            ALTER TABLE {table}
+            {updater}
+            '''
+            await self._connection.executescript(op)
+            await self._connection.commit()
         return table
 
     async def get_for(self, identifier: COG, table: str, schema: Type[S]) -> CogDatabase[S]:

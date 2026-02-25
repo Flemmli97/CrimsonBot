@@ -8,9 +8,6 @@ bot_token: ""
 # Level for console log messages
 logging_level: "INFO"
 
-# The channel where chat log messages will be sent to
-log_channel: ""
-
 # Module of linking your minecraft account with your discord account
 minecraft_linker:
 

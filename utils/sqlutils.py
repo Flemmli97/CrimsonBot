@@ -1,7 +1,8 @@
 import json
 from dataclasses import dataclass
-from typing import Protocol, TypeVar, Generic, Callable, Any, Type, get_args, get_origin
+from typing import Awaitable, Protocol, TypeVar, Generic, Callable, Any, Type, Union, get_args, get_origin
 
+from aiosqlite import Cursor
 from discord.ext import commands
 
 T = TypeVar("T")
@@ -27,12 +28,32 @@ class SQLSchema:
 
 
 class Schema(Protocol):
+
     @classmethod
     def to_sql_schema(cls) -> SQLSchema: ...
 
+    @classmethod
+    async def table_update(cls, name: str, verifier: Callable[[str], Awaitable[Cursor]]) -> str | None:
+        ''' A Handler for updating the tables schema
+            Parameters
+            ------------
+            name: :class:`str`
+            The name of the table
+
+            verifier: Callable[[str], Awaitable[Cursor]]
+                Check here if the table matches the required schema or not before returning the update.
+                Accepts an sql query and returns the queried value
+            
+            Returns
+            --------
+            :class:`str`
+                The table update sql command. Or NONE to not update the table
+        '''
+        ...
+
 
 S = TypeVar("S", bound=Schema)
-COG = TypeVar("COG", bound=commands.Cog)
+COG = TypeVar("COG", bound=Union[commands.Cog, str])
 
 
 def encode_sql_obj(obj: S) -> dict[str, Any]:
