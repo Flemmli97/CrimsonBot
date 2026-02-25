@@ -89,7 +89,7 @@ class MinecraftLinker(commands.Cog):
         if roles:
             desc = ''
             for role_config in roles:
-                role = discord.utils.get(interaction.guild.roles, id=int(role_config))
+                role = discord.utils.get(interaction.guild.roles, id=int(role_config.role))
                 name = role.mention if role else f'Unknown ({role_config.role})'
                 desc += f'- {name}: {role_config.tier}'
             embed = discord.Embed(
