@@ -2,7 +2,7 @@ services:
   patreon_linker:
     build: .
     restart: always
-    container_name: PatreonLinker
+    container_name: CrimsonBot
     environment:
       - DATA=/bot/data # The bots data directory inside the container
       - CONFIG=./config.yml # The bots config file relative to the DATA directory
