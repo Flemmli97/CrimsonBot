@@ -1,5 +1,5 @@
 services:
-  patreon_linker:
+  crimson_bot:
     build: .
     restart: always
     container_name: CrimsonBot
