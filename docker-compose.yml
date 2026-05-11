@@ -7,4 +7,4 @@ services:
       - DATA=/bot/data # The bots data directory inside the container
       - CONFIG=./config.yml # The bots config file relative to the DATA directory
     volumes:
-      - ./data:/bot/data
+      - .:/bot
