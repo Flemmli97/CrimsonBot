@@ -124,8 +124,11 @@ class Wiki(commands.Cog):
             "q": query,
             "query_by": "*",
             "filter_by": f'{filter_by}',
-            "num_typos": f'{0 if len(query) < 3 else 2}'
+            "min_len_1typo": 5,
+            "min_len_2typo": 9
         }
+        if (type != 'content'):
+            search_params["num_typos"] = 1
         res = await self.client.collections[self.collection].documents.search(search_params)
         hits = res['hits']
         urls = {}
