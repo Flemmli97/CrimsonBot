@@ -107,7 +107,7 @@ class MainCog(commands.Cog):
     )
     async def set_log_channel(self, interaction: Interaction, channel: Optional[TextChannel]):
         self.logger.info(
-            f'Setting bots log channel to {channel.name if channel else 'none'} for guild {interaction.guild.name}')
+            f'Setting bots log channel to {channel.name if channel else "none"} for guild {interaction.guild.name}')
         config = await self.main_config.get(interaction.guild.id)
         if not config:
             config = BotConfig(0)
