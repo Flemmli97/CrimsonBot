@@ -163,10 +163,7 @@ class CustomCommands(commands.Cog):
 
     @remove_custom_command.autocomplete("command")
     @get_custom_command.autocomplete("command")
-    async def cmd_autocomplete(self,
-                                 interaction: discord.Interaction,
-                                 current: str,
-                                 ):
+    async def cmd_autocomplete(self, interaction: discord.Interaction, current: str):
         commands = await self.data.get_all(interaction.guild.id)
         return [app_commands.Choice(name=cmd.command, value=cmd.command) for cmd in commands if
                 cmd.command.startswith(current)][:25]
