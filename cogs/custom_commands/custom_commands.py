@@ -96,7 +96,7 @@ class CustomCommands(commands.Cog):
         self.logger.info(f'{interaction.guild.name}: Created custom command {entry}')
         await self.data.upsert(interaction.guild.id, entry)
         msg = self.message_from_json(entry.message)
-        msg["content"] = f"> Setup custom command `{command}`\n=====\n{msg['content']}"
+        msg["content"] = f"> Setup custom command `{command}`\n=====\n{msg['content'] if msg['content'] else ''}"
         await interaction.followup.send(**msg)
 
     @group.command(name='remove', description="Remove a custom command")
