@@ -36,7 +36,7 @@ class FilePaste(commands.Cog):
         self.logger = self.bot.logger.getChild("FilePaste")
         self.config = self.bot.get_config_for('paste')
 
-    group = app_commands.Group(name="paste", description="Paste Configs",
+    group = app_commands.Group(name="paste", description="Manage paste Configs",
                                default_permissions=discord.Permissions(administrator=True))
 
     chat_group = app_commands.Group(name="chat", description="Paste Configs for channels",
@@ -52,7 +52,7 @@ class FilePaste(commands.Cog):
         await self.load_db()
 
     @group.command(name='get', description="Get Paste Configs")
-    async def get_linked_roles(self, interaction: discord.Interaction):
+    async def get_paste_config(self, interaction: discord.Interaction):
         configs = await self.configs_db.get(interaction.guild.id)
         self.logger.info(f'{interaction.guild.name}: Fetched paste configs {configs}')
         if configs:
@@ -107,7 +107,7 @@ class FilePaste(commands.Cog):
         msg = f'Added channel {channel.mention} to paste whitelist' if res else f'Could not add channel {channel.mention} to paste whitelist'
         await interaction.response.send_message(msg, allowed_mentions=False)
 
-    @category_group.command(name='add', description="Add a chat to the whitelist")
+    @category_group.command(name='add', description="Add a channel category to the whitelist")
     @app_commands.describe(
         category="The channel category to add"
     )
@@ -122,7 +122,7 @@ class FilePaste(commands.Cog):
         msg = f'Added category {category.mention} to paste whitelist' if res else f'Could not add category {category.mention} to paste whitelist'
         await interaction.response.send_message(msg, allowed_mentions=False)
 
-    @category_group.command(name='remove', description="Remove a chat from the whitelist")
+    @category_group.command(name='remove', description="Remove a channel category from the whitelist")
     @app_commands.describe(
         category="The channel category to remove"
     )
@@ -169,7 +169,7 @@ class FilePaste(commands.Cog):
             if not len(channel_category) != 0 and str(message.channel.category.id) not in channel_category:
                 return
             self.logger.info(
-                f'{message.guild.name}: Attempting processing message (at {message.created_at}) with attachments: {message.attachments}')
+                f'{message.guild.name}: Attempting to process message (at {message.created_at}) with attachments: {message.attachments}')
             urls = []
             allowed: tuple[str] = tuple(get_single_or_list(self.config, "allowed_files"))
             for attachment in message.attachments:
