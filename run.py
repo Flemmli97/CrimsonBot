@@ -1,4 +1,5 @@
 import logging
+import logging.handlers
 import os
 import shutil
 import sys
@@ -105,8 +106,7 @@ console_handler = logging.StreamHandler()
 console_handler.setFormatter(LogFormatting())
 logger.addHandler(console_handler)
 
-file_handler = logging.FileHandler(filename=f'{LOGGER_DIR}/{time.strftime("%Y-%m-%d-%H:%M:%S")}.log', encoding="utf-8",
-                                   mode="w")
+file_handler = logging.handlers.TimedRotatingFileHandler(filename=f'{LOGGER_DIR}/bot.log', encoding="utf-8", when="D")
 file_handler_formatter = logging.Formatter(
     "%(asctime)s [%(levelname)s] %(name)s - %(message)s", "%Y-%m-%d %H:%M:%S")
 file_handler.setFormatter(file_handler_formatter)
@@ -145,4 +145,5 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = Bot(intents=intents, config=config, logger=logger, data_directory=DATA_DIR)
+logger.info(f"===== Starting bot {bot.config['name']} =====")
 bot.run(bot.config["bot_token"])
