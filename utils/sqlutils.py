@@ -92,6 +92,8 @@ def decode_sql_obj(sql_result: dict[str, Any], clss: Type[S]) -> S:
 def _is_json_supported_type__(field) -> bool:
     factory = None
     orig = get_origin(field)
+    if field is list or field is dict:
+        factory = field
     if orig is list or orig is dict:
         factory = orig
     allow_none = False
