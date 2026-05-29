@@ -63,6 +63,10 @@ class CustomCommands(commands.Cog):
         return await self.data.get(guild.id, command=command)
 
     @group.command(name='create', description="Create a new custom command")
+    @app_commands.describe(
+        command="The name of the new command",
+        replace="Whether to replace an existing command or not",
+    )
     async def create_custom_command(self, interaction: discord.Interaction, command: str, replace: Optional[bool]):
         self.logger.info(f'{interaction.guild.name}: Creating custom command {command}')
         current = await self.get_data(interaction.guild, command)
@@ -100,6 +104,9 @@ class CustomCommands(commands.Cog):
         await interaction.followup.send(**msg)
 
     @group.command(name='remove', description="Remove a custom command")
+    @app_commands.describe(
+        command="The command to remove",
+    )
     async def remove_custom_command(self, interaction: discord.Interaction, command: str):
         self.logger.info(f'{interaction.guild.name}: Removing custom command {command}')
         current = await self.get_data(interaction.guild, command)
@@ -112,6 +119,9 @@ class CustomCommands(commands.Cog):
             f"Removed custom command {command}" if res else f"Could not remove custom command {command}")
 
     @group.command(name='get', description="Get the json of a custom command")
+    @app_commands.describe(
+        command="The command to get",
+    )
     async def get_custom_command(self, interaction: discord.Interaction, command: str):
         self.logger.info(f'{interaction.guild.name}: Get custom command {command}')
         current = await self.get_data(interaction.guild, command)
@@ -126,6 +136,9 @@ class CustomCommands(commands.Cog):
         ))
 
     @group.command(name='prefix', description="Set the prefix for custom commands")
+    @app_commands.describe(
+        prefix="Prefix to use for all commands",
+    )
     async def command_prefix(self, interaction: discord.Interaction, prefix: str):
         self.logger.info(f'{interaction.guild.name}: Set custom command prefix to {prefix}')
         config = await self.get_config(interaction.guild)
@@ -138,6 +151,9 @@ class CustomCommands(commands.Cog):
             f"Set custom command to {prefix}" if res else f"Could not set prefix")
 
     @app_commands.command(name='commands', description="Lists all custom commands")
+    @app_commands.describe(
+        page="The page to show. Each page has a 10 entry limit",
+    )
     async def list_custom_commands(self, interaction: discord.Interaction, page: Optional[int]):
         self.logger.info(f'{interaction.guild.name}: List custom commands')
         page = page or 0
