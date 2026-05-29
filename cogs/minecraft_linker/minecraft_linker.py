@@ -9,7 +9,7 @@ import requests
 from discord import app_commands
 from discord.ext import commands
 
-from utils.bot import Bot
+from utils.bot import EMBED_COLOR, Bot
 from utils.config import get_single_or_list
 from utils.database import CogDatabase
 from utils.sqlutils import Schema, SQLSchema
@@ -44,7 +44,7 @@ class LinkedUserData(Schema):
                         patreon_tier int(4) NOT NULL,
                         minecraft_uuid varchar(40) NOT NULL,
                         minecraft_username varchar(20) NOT NULL,
-                        `data` json,
+                        data json,
                     ''', keys=['user_id'])
         return schema
 
@@ -95,7 +95,7 @@ class MinecraftLinker(commands.Cog):
             embed = discord.Embed(
                 title="Roles",
                 description=desc,
-                color=0x1A1897
+                color=EMBED_COLOR
             )
             await interaction.response.send_message("Current role configs on this server", embed=embed,
                                                     allowed_mentions=False)

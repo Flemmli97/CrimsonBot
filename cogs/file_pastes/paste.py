@@ -6,7 +6,7 @@ import requests
 from discord import app_commands
 from discord.ext import commands
 
-from utils.bot import Bot
+from utils.bot import EMBED_COLOR, Bot
 from utils.config import get_single_or_list
 from utils.sqlutils import SQLSchema, Schema
 
@@ -23,8 +23,8 @@ class PasteConfig(Schema):
     @classmethod
     def to_sql_schema(cls) -> SQLSchema:
         schema: SQLSchema = SQLSchema(schema='''
-                        `channels` json,
-                        `channel_categories` json,
+                        channels json,
+                        channel_categories json,
                     ''', keys=[])
         return schema
 
@@ -69,7 +69,7 @@ class FilePaste(commands.Cog):
             embed = discord.Embed(
                 title="Listening in",
                 description=f'> Chats: {", ".join(channels)}  \n  \n> Chat Categories: {", ".join(categories)}',
-                color=0x1A1897
+                color=EMBED_COLOR
             )
             await interaction.response.send_message("Current paste configs on this server", embed=embed,
                                                     allowed_mentions=False)

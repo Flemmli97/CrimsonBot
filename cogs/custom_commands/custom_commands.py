@@ -7,7 +7,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils.bot import Bot
+from utils.bot import EMBED_COLOR, Bot
 from utils.database import CogDatabase
 from utils.sqlutils import Schema, SQLSchema
 
@@ -19,7 +19,7 @@ class CustomCommandsConfig(Schema):
     @classmethod
     def to_sql_schema(cls) -> SQLSchema:
         schema: SQLSchema = SQLSchema(schema='''
-                        prefix varchar(40)
+                        prefix varchar(10)
                     ''', keys=[])
         return schema
 
@@ -32,8 +32,8 @@ class CustomCommandsEntry(Schema):
     @classmethod
     def to_sql_schema(cls) -> SQLSchema:
         schema: SQLSchema = SQLSchema(schema='''
-                        command varchar(40),
-                        `message` json,
+                        command varchar(20),
+                        message json,
                     ''', keys=['command'])
         return schema
 
@@ -72,11 +72,11 @@ class CustomCommands(commands.Cog):
         current = await self.get_data(interaction.guild, command)
         if current and not replace:
             await interaction.response.send_message(
-                f"Command {command} exists already. Use replace option to overwrite it")
+                f"Command {command} exists already. Use replace option to overwrite it", ephemeral=True)
             return
         await interaction.response.defer()
         await interaction.followup.send(
-            f"Creating a custom command `{command}`. Send either text or a json file for setup")
+            f"Creating a custom command `{command}`. Send either text or a json file for setup", ephemeral=True)
         res = await self.bot.wait_for(
             "message",
             check=lambda x: x.channel.id == interaction.channel.id and x.author.id == interaction.user.id,
@@ -96,12 +96,16 @@ class CustomCommands(commands.Cog):
             }
         else:
             content = {"content": res.content}
+        try:
+            await res.delete()
+        except Exception:
+            pass
         entry = CustomCommandsEntry(command, content)
         self.logger.info(f'{interaction.guild.name}: Created custom command {entry}')
         await self.data.upsert(interaction.guild.id, entry)
         msg = self.message_from_json(entry.message)
         msg["content"] = f"> Setup custom command `{command}`\n=====\n{msg['content'] if msg['content'] else ''}"
-        await interaction.followup.send(**msg)
+        await interaction.followup.send(**msg, ephemeral=True)
 
     @group.command(name='remove', description="Remove a custom command")
     @app_commands.describe(
@@ -161,7 +165,7 @@ class CustomCommands(commands.Cog):
         if len(current) == 0:
             embed = discord.Embed(
                 title=f"Server has no custom commands",
-                color=0x1A1897
+                color=EMBED_COLOR
             )
             await interaction.response.send_message(embed=embed)
             return
@@ -173,7 +177,7 @@ class CustomCommands(commands.Cog):
         embed = discord.Embed(
             title=f"Custom command list:",
             description=desc,
-            color=0x1A1897
+            color=EMBED_COLOR
         )
         await interaction.response.send_message(embed=embed)
 
@@ -186,6 +190,8 @@ class CustomCommands(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        if not message.guild:
+            return
         prefix = await self.get_command_prefix(message.guild)
         if message.content.startswith(prefix):
             command = message.content[len(prefix):].strip()

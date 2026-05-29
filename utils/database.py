@@ -61,6 +61,17 @@ class CogDatabase(Generic[S]):
                 return decode_sql_obj(dict(result), self._cls)
             return None
 
+    async def get_all_of(self) -> list[tuple[int, S]]:
+        async with self._connection.cursor() as cursor:
+            await cursor.execute(
+                f'SELECT * FROM {self.table}')
+            fetched = await cursor.fetchall()
+            results = []
+            for result in fetched:
+                result_v = dict(result)
+                results.append((int(result_v[GUILD_ID]), decode_sql_obj(result_v, self._cls)))
+            return results
+
     async def get_all(self, guild: int, **kwargs) -> list[S]:
         async with self._connection.cursor() as cursor:
             query = f'{GUILD_ID}=?'

@@ -11,7 +11,7 @@ from discord import app_commands, Interaction
 from discord.ext import commands
 from typesense.configuration import NodeConfigDict
 
-from utils.bot import Bot
+from utils.bot import EMBED_COLOR, Bot
 
 
 class ProjectData(typing.TypedDict):
@@ -154,7 +154,7 @@ class Wiki(commands.Cog):
                     title=meta.get("title", url),
                     description=urls[url] if use_highlight and urls[url] else meta.get("description", ''),
                     url=url,
-                    color=0x1A1897
+                    color=EMBED_COLOR
                 )
             await interaction.followup.send(msg, embed=embed)
             return True
@@ -175,7 +175,7 @@ class Wiki(commands.Cog):
         embed = discord.Embed(
             title=f'Search result for "{query}"',
             description=description,
-            color=0x1A1897
+            color=EMBED_COLOR
         )
         if amount > 5:
             search_url = f'{self.config["url"]}/search?q={query}'

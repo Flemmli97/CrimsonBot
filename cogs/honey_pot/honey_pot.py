@@ -4,7 +4,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils.bot import Bot
+from utils.bot import EMBED_COLOR, Bot
 from utils.database import CogDatabase
 from utils.sqlutils import Schema, SQLSchema
 
@@ -19,8 +19,8 @@ class HoneypotConfig(Schema):
     def to_sql_schema(cls) -> SQLSchema:
         schema: SQLSchema = SQLSchema(schema='''
                         channel int(25),
-                        `ignored_roles` json,
-                        `ignored_users` json,
+                        ignored_roles json,
+                        ignored_users json,
                     ''', keys=[])
         return schema
 
@@ -70,7 +70,7 @@ class Honeypot(commands.Cog):
 
     @user_group.command(name='ignore', description="Ignores messages from given user")
     @app_commands.describe(
-        channel="The user whose messages will be ignored",
+        user="The user whose messages will be ignored",
     )
     async def ignore_user(self, interaction: discord.Interaction, user: discord.Member):
         self.logger.info(f'{interaction.guild.name}: Adding user to ignore for honeypots {user.name}')
@@ -85,7 +85,7 @@ class Honeypot(commands.Cog):
 
     @user_group.command(name='unignore', description="Unignores messages from given user again")
     @app_commands.describe(
-        channel="The user to remove",
+        user="The user to remove",
     )
     async def unignore_usesr(self, interaction: discord.Interaction, user: discord.Member):
         self.logger.info(f'{interaction.guild.name}: Removing the user {user.name} to ignore for honeypots ignore list')
@@ -101,7 +101,7 @@ class Honeypot(commands.Cog):
 
     @role_group.command(name='ignore', description="Ignores messages from given roles")
     @app_commands.describe(
-        channel="The role to to ignore",
+        role="The role to to ignore",
     )
     async def ignore_user(self, interaction: discord.Interaction, role: discord.Role):
         self.logger.info(f'{interaction.guild.name}: Adding role to ignore for honeypots {role.name}')
@@ -116,7 +116,7 @@ class Honeypot(commands.Cog):
 
     @role_group.command(name='unignore', description="Unignores messages from given roles again")
     @app_commands.describe(
-        channel="The role to remove",
+        role="The role to remove",
     )
     async def unignore_usesr(self, interaction: discord.Interaction, role: discord.Role):
         self.logger.info(f'{interaction.guild.name}: Removing the role {role.name} to ignore for honeypots ignore list')
@@ -149,7 +149,7 @@ class Honeypot(commands.Cog):
             embed = discord.Embed(
                 title=f"Honeypot setup in {channel.mention}" if channel else "Honeypot channel not set",
                 description=f'> Ignored Users: {", ".join(users)}  \n  \n> Ignored Roles: {", ".join(roles)}',
-                color=0x1A1897
+                color=EMBED_COLOR
             )
             await interaction.response.send_message("Current honeypot configs on this server", embed=embed,
                                                     allowed_mentions=False)
@@ -158,6 +158,8 @@ class Honeypot(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        if not message.guild:
+            return
         config = await self.get_config(message.guild)
         if not config or not config.channel or message.channel.id != config.channel:
             return

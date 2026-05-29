@@ -1,15 +1,19 @@
 import os
 from dataclasses import dataclass
+from datetime import datetime
 from logging import Logger
-from typing import Optional
+from typing import Optional, Callable, Awaitable
 
 import aiosqlite
+import discord
 from discord import Intents, app_commands, Interaction, TextChannel, Permissions
 from discord.ext import commands
 from discord.ext.commands import Context, errors, CommandNotFound, MissingRequiredArgument
 
 from utils.database import BotDatabase, CogDatabase
 from utils.sqlutils import SQLSchema, Schema
+
+EMBED_COLOR = 0x681559
 
 
 @dataclass
@@ -24,6 +28,12 @@ class BotConfig(Schema):
         return schema
 
 
+LogChannelHandler = Callable[
+    [discord.TextChannel],
+    Awaitable[None]
+]
+
+
 class Bot(commands.Bot):
     def __init__(self, *, intents: Intents, config: dict, logger: Logger, data_directory: str):
         super().__init__(intents=intents, command_prefix=config.get('prefix', '!'))
@@ -35,6 +45,7 @@ class Bot(commands.Bot):
         self.__base_data_dir__ = self.get_dir_with('database')
         self.event(self.on_ready)
         self.main_config: CogDatabase[BotConfig] = None
+        self._temp_banning: list[tuple[int, int]] = []
 
     def get_config_for(self, path: str):
         return self.config.get(path, {})
@@ -78,10 +89,6 @@ class Bot(commands.Bot):
         self.logger.info("Closing Bot")
         await self.database.close()
 
-    async def get_log_channel(self, guild: int):
-        config = await self.main_config.get(guild)
-        return config.log_channel if config and config.log_channel else None
-
     async def on_command_error(self, ctx: Context, exception: errors.CommandError) -> None:
         if isinstance(exception, CommandNotFound):
             return None
@@ -92,6 +99,28 @@ class Bot(commands.Bot):
                 delete_after=15)
             return None
         return await super().on_command_error(ctx, exception)
+
+    async def get_log_channel(self, guild: discord.Guild):
+        config = await self.main_config.get(guild.id)
+        if not config:
+            return None
+        channel = guild.get_channel(config.log_channel)
+        if isinstance(channel, TextChannel):
+            return channel
+        return None
+
+    async def send_embed_mod_log(self, guild: discord.Guild, msg: str, user: discord.Member):
+        embed = discord.Embed(
+            description=msg,
+            timestamp=datetime.now(),
+            color=EMBED_COLOR
+        ).set_author(name=user.display_name, url=None, icon_url=user.display_avatar)
+        await self.send_mod_log(guild, lambda ch: ch.send(embed=embed))
+
+    async def send_mod_log(self, guild: discord.Guild, handler: LogChannelHandler):
+        channel = await self.get_log_channel(guild)
+        if channel:
+            await handler(channel)
 
 
 class MainCog(commands.Cog):
