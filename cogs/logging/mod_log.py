@@ -5,12 +5,11 @@ from discord.ext import commands
 
 from utils.bot import EMBED_COLOR, Bot
 
-'''
-Note: message logging only works for new messages with the bot
-'''
-
 
 class ModLog(commands.Cog):
+    """
+    Note: message logging only works for new messages with the bot
+    """
 
     def __init__(self, bot: Bot):
         self.bot = bot
