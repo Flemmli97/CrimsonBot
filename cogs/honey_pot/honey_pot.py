@@ -1,9 +1,11 @@
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
+from cogs.moderation.moderation import Moderation
 from utils.bot import EMBED_COLOR, Bot
 from utils.database import CogDatabase
 from utils.sqlutils import Schema, SQLSchema
@@ -173,7 +175,9 @@ class Honeypot(commands.Cog):
             if has_role:
                 return
         self.logger.info(f'HONEYPOT - {message.author.name} in {message.guild.name}: {message.content}')
-        await message.author.ban(delete_message_seconds=60, reason="Talking in the honeypot")
+        mod: Moderation = self.bot.get_cog("Moderation")
+        await mod.temp_ban(message.guild, message.author, datetime.now(timezone.utc) + timedelta(minutes=15),
+                           reason="Talking in the honeypot", delete_seconds=60)
 
 
 async def setup(bot: Bot) -> None:

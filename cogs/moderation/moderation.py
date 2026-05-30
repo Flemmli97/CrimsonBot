@@ -95,9 +95,9 @@ class Moderation(commands.Cog):
         delete_days="How far back messages will be deleted. Default is 3 days",
         reason="The reason for the ban. This shows up in the audit logs",
     )
-    async def temp_ban(self, interaction: discord.Interaction, user: discord.Member,
-                       duration_minutes: Optional[int], duration_hours: Optional[int], duration_days: Optional[int],
-                       delete_days: Optional[int], reason: Optional[str]):
+    async def temp_ban_cmd(self, interaction: discord.Interaction, user: discord.Member,
+                           duration_minutes: Optional[int], duration_hours: Optional[int], duration_days: Optional[int],
+                           delete_days: Optional[int], reason: Optional[str]):
         if user.bot or user.guild_permissions.administrator:
             await interaction.response.send_message(f"Cannot ban this user", ephemeral=True)
             return
@@ -107,22 +107,30 @@ class Moderation(commands.Cog):
             return
         end_time = datetime.now(timezone.utc) + timedelta(minutes=duration_minutes or 0, hours=duration_hours or 0,
                                                           days=duration_days or 0)
-        current = await self.temp_bans.get(interaction.guild.id, user=user.id)
-        if current and current.banned_till > end_time:
+        entry = await self.temp_ban(interaction.guild, user, end_time, reason, delete_days=delete_days or 3)
+        if entry:
             await interaction.response.send_message(
-                f"User is already temporary banned till <t:{round(current.banned_till.timestamp())}:s>", ephemeral=True)
-            return
-        self.logger.info(f'{interaction.guild.name}: Temporary banning {user.name} till {end_time}')
-        delete_days = delete_days or 3
-        self.bot._temp_banning.append((interaction.guild.id, user.id))
-        await user.ban(delete_message_days=delete_days, reason=reason)
+                f"User is already temporary banned till <t:{round(entry.banned_till.timestamp())}:s>", ephemeral=True)
+        else:
+            await interaction.response.send_message(
+                f"Banned user {user.mention} till <t:{round(end_time.timestamp())}:s>",
+                ephemeral=True)
+
+    async def temp_ban(self, guild: discord.Guild, user: discord.Member, end_time: datetime, reason: Optional[str],
+                       delete_days: int | None = None, delete_seconds: int | None = None):
+        current = await self.temp_bans.get(guild.id, user=user.id)
+        if current and current.banned_till > end_time:
+            return current
+        self.logger.info(f'{guild.name}: Temporary banning {user.name}{f' {reason}' if reason else ''} till {end_time}')
+        self.bot._temp_banning.append((guild.id, user.id))
+        reason_str = f': **{reason}**' if reason else ''
+        await user.send(f"You got banned from {guild.name} till <t:{round(end_time.timestamp())}:s>{reason_str}")
+        await user.ban(delete_message_days=delete_days, delete_message_seconds=delete_seconds, reason=reason)
         entry = TempBanEntry(user=user.id, banned_till=end_time)
-        await self.temp_bans.upsert(interaction.guild.id, entry)
-        await interaction.response.send_message(f"Banned user {user.mention} till <t:{round(end_time.timestamp())}:s>",
-                                                ephemeral=True)
-        await self.bot.send_embed_mod_log(interaction.guild,
-                                          f"{interaction.user.mention} banned {user.mention} till <t:{round(end_time.timestamp())}:s> {f'for {reason}' if reason else ''}",
-                                          interaction.user)
+        await self.temp_bans.upsert(guild.id, entry)
+        await self.bot.send_embed_mod_log(guild,
+                                          f"{user.mention} banned {user.mention} till <t:{round(end_time.timestamp())}:s>{reason_str}",
+                                          user)
 
     @commands.Cog.listener()
     async def on_member_unban(self, guild: discord.Guild, user: discord.User):
