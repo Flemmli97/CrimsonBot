@@ -66,15 +66,14 @@ class ModLog(commands.Cog):
     async def on_audit_log_entry_create(self, entry: discord.AuditLogEntry):
         match entry.action:
             case discord.AuditLogAction.kick:
-                source = f' by {entry.user.mention}' if entry.user else ''
-                reason = f' because {entry.reason}' if entry.reason else ''
+                source = f" by {entry.user.mention}" if entry.user else ""
+                reason = f" because {entry.reason}" if entry.reason else ""
                 embed = discord.Embed(
                     description=f"**<@{entry.target.id}> got kicked {source} {reason}**",
                     timestamp=datetime.now(),
                     color=EMBED_COLOR
                 )
-                await self.bot.send_mod_log(entry.guild,
-                                            lambda ch: ch.send(embed=embed))
+                await self.bot.send_mod_log(entry.guild, lambda ch: ch.send(embed=embed))
             case discord.AuditLogAction.ban:
                 # Checking if user was temp or perma banned
                 current = len(self.bot._temp_banning)
@@ -82,24 +81,22 @@ class ModLog(commands.Cog):
                                           guild_id != entry.guild.id and user_id != entry.target.id]
                 # If not changed this means user was not temp banned
                 if current == len(self.bot._temp_banning):
-                    source = f' by {entry.user.mention}' if entry.user else ''
-                    reason = f' because {entry.reason}' if entry.reason else ''
+                    source = f" by {entry.user.mention}" if entry.user else ""
+                    reason = f" because {entry.reason}" if entry.reason else ""
                     embed = discord.Embed(
                         description=f"**<@{entry.target.id}> got banned {source} {reason}**",
                         timestamp=datetime.now(),
                         color=EMBED_COLOR
                     )
-                    await self.bot.send_mod_log(entry.guild,
-                                                lambda ch: ch.send(embed=embed))
+                    await self.bot.send_mod_log(entry.guild, lambda ch: ch.send(embed=embed))
             case discord.AuditLogAction.unban:
-                source = f' by {entry.user.mention}' if entry.user else ''
+                source = f" by {entry.user.mention}" if entry.user else ""
                 embed = discord.Embed(
                     description=f"**<@{entry.target.id}> got unbanned {source}**",
                     timestamp=datetime.now(),
                     color=EMBED_COLOR
                 )
-                await self.bot.send_mod_log(entry.guild,
-                                            lambda ch: ch.send(embed=embed))
+                await self.bot.send_mod_log(entry.guild, lambda ch: ch.send(embed=embed))
 
 
 async def setup(bot: Bot) -> None:

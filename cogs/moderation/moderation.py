@@ -19,10 +19,10 @@ class TempBanEntry(Schema):
 
     @classmethod
     def to_sql_schema(cls) -> SQLSchema:
-        schema: SQLSchema = SQLSchema(schema='''
+        schema: SQLSchema = SQLSchema(schema="""
                         user int(25) NOT NULL,
                         banned_till varchar(32) NOT NULL,
-                    ''', keys=['user'])
+                    """, keys=["user"])
         return schema
 
 
@@ -40,7 +40,7 @@ class Moderation(commands.Cog):
     async def cog_load(self):
         await self.load_db()
 
-    @app_commands.command(name='softban', description="Softbans (ban and unbans) user to delete all recent messages")
+    @app_commands.command(name="softban", description="Softbans (ban and unbans) user to delete all recent messages")
     @app_commands.default_permissions(discord.Permissions(administrator=True))
     @app_commands.describe(
         user="The user to ban",
@@ -50,42 +50,46 @@ class Moderation(commands.Cog):
         if user.bot or user.guild_permissions.administrator:
             await interaction.response.send_message(f"Cannot ban this user", ephemeral=True)
             return
-        self.logger.info(f'{interaction.guild.name}: Softbanning {user.name}')
+        self.logger.info(f"{interaction.guild.name}: Softbanning {user.name}")
         delete_days = delete_days or 3
         await user.ban(delete_message_days=delete_days, reason="Softban")
         await user.unban(reason="Softban")
         await interaction.response.send_message(f"Softbanned {user.id} for channel", ephemeral=True)
-        await self.bot.send_embed_mod_log(interaction.guild,
-                                          f"{interaction.user.mention} softbanned {user.mention}",
+        await self.bot.send_embed_mod_log(interaction.guild, f"{interaction.user.mention} softbanned {user.mention}",
                                           interaction.user)
 
-    @app_commands.command(name='slowmode', description="Sets slowmode for chat")
+    @app_commands.command(name="slowmode", description="Sets slowmode for chat")
     @app_commands.default_permissions(discord.Permissions(administrator=True))
     @app_commands.describe(
         channel="The channel in which to enable slowmode. Defaults to the current channel",
         time="Duration for slowmode in seconds. If 0 removes slowmode. Defaults to 0",
     )
-    async def slowmode(self, interaction: discord.Interaction,
-                       channel: Optional[
-                           discord.TextChannel | discord.VoiceChannel | discord.StageChannel | discord.Thread],
-                       time: Optional[int]):
+    async def slowmode(
+            self,
+            interaction: discord.Interaction,
+            channel: Optional[discord.TextChannel | discord.VoiceChannel | discord.StageChannel | discord.Thread],
+            time: Optional[int]
+    ):
         channel = channel or interaction.channel
         time = max(0, time or 0)
         if channel.slowmode_delay == time:
-            await interaction.response.send_message(
-                f"Channel already has this slowmode state",
-                ephemeral=True)
+            await interaction.response.send_message(f"Channel already has this slowmode state", ephemeral=True)
             return
-        self.logger.info(f'{interaction.guild.name}: Setting slowmode for channel {channel.name} to {time}s')
+        self.logger.info(f"{interaction.guild.name}: Setting slowmode for channel {channel.name} to {time}s")
         await channel.edit(slowmode_delay=time)
         await interaction.response.send_message(
             f"Setting slowmode in channel {channel.mention} to {time}s" if time > 0 else f"Removing slowmode for channel {channel.mention}",
-            ephemeral=True)
-        await self.bot.send_embed_mod_log(interaction.guild,
-                                          f"{interaction.user.mention} enabled slowmode ({time}s) in channel {channel.mention}" if time != 0 else f"{interaction.user.mention} removed slowmode in channel {channel.mention}",
-                                          interaction.user)
+            ephemeral=True
+        )
+        await self.bot.send_embed_mod_log(
+            interaction.guild,
+            f"{interaction.user.mention} enabled slowmode ({time}s) in channel {channel.mention}"
+            if time != 0
+            else f"{interaction.user.mention} removed slowmode in channel {channel.mention}",
+            interaction.user,
+        )
 
-    @app_commands.command(name='tempban', description="Bans a user for the given duration")
+    @app_commands.command(name="tempban", description="Bans a user for the given duration")
     @app_commands.default_permissions(discord.Permissions(administrator=True))
     @app_commands.describe(
         user="User to ban",
@@ -95,9 +99,16 @@ class Moderation(commands.Cog):
         delete_days="How far back messages will be deleted. Default is 3 days",
         reason="The reason for the ban. This shows up in the audit logs",
     )
-    async def temp_ban_cmd(self, interaction: discord.Interaction, user: discord.Member,
-                           duration_minutes: Optional[int], duration_hours: Optional[int], duration_days: Optional[int],
-                           delete_days: Optional[int], reason: Optional[str]):
+    async def temp_ban_cmd(
+            self,
+            interaction: discord.Interaction,
+            user: discord.Member,
+            duration_minutes: Optional[int],
+            duration_hours: Optional[int],
+            duration_days: Optional[int],
+            delete_days: Optional[int],
+            reason: Optional[str],
+    ):
         if user.bot or user.guild_permissions.administrator:
             await interaction.response.send_message(f"Cannot ban this user", ephemeral=True)
             return
@@ -113,17 +124,18 @@ class Moderation(commands.Cog):
                 f"User is already temporary banned till <t:{round(entry.banned_till.timestamp())}:s>", ephemeral=True)
         else:
             await interaction.response.send_message(
-                f"Banned user {user.mention} till <t:{round(end_time.timestamp())}:s>",
-                ephemeral=True)
+                f"Banned user {user.mention} till <t:{round(end_time.timestamp())}:s>", ephemeral=True)
 
-    async def temp_ban(self, guild: discord.Guild, user: discord.Member, end_time: datetime, reason: Optional[str],
-                       delete_days: int | None = None, delete_seconds: int | None = None):
+    async def temp_ban(
+            self, guild: discord.Guild, user: discord.Member, end_time: datetime, reason: Optional[str],
+            delete_days: int | None = None, delete_seconds: int | None = None
+    ):
         current = await self.temp_bans.get(guild.id, user=user.id)
         if current and current.banned_till > end_time:
             return current
-        self.logger.info(f'{guild.name}: Temporary banning {user.name}{f" {reason}" if reason else ""} till {end_time}')
+        self.logger.info(f"{guild.name}: Temporary banning {user.name}{f' {reason}' if reason else ''} till {end_time}")
         self.bot._temp_banning.append((guild.id, user.id))
-        reason_str = f': **{reason}**' if reason else ''
+        reason_str = f": **{reason}**" if reason else ""
         await user.send(f"You got banned from {guild.name} till <t:{round(end_time.timestamp())}:s>{reason_str}")
         await user.ban(delete_message_days=delete_days, delete_message_seconds=delete_seconds, reason=reason)
         entry = TempBanEntry(user=user.id, banned_till=end_time)
@@ -136,7 +148,7 @@ class Moderation(commands.Cog):
     async def on_member_unban(self, guild: discord.Guild, user: discord.User):
         entry = await self.temp_bans.get(guild.id, user=user.id)
         if entry:
-            self.logger.info(f'{guild.name}: Lifting temp ban for {user.name}')
+            self.logger.info(f"{guild.name}: Lifting temp ban for {user.name}")
             await self.temp_bans.remove(guild.id, user=user.id)
 
     async def temp_ban_update(self) -> None:
@@ -145,7 +157,7 @@ class Moderation(commands.Cog):
                 try:
                     entries = await self.temp_bans.get_all_of()
                     now = datetime.now(timezone.utc)
-                    for (guild, entry) in entries:
+                    for guild, entry in entries:
                         if now >= entry.banned_till:
                             await self.temp_bans.remove(guild=guild, user=entry.user)
                             await self.bot.get_guild(guild).unban(user=Object(entry.user), reason="Temp Ban expired")

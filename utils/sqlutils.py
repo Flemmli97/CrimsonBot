@@ -14,8 +14,7 @@ class SQLCodec(Generic[T]):
     decoder: Callable[[str], T]
 
 
-JSON_CODEC = SQLCodec(lambda x: json.dumps(x) if x else None,
-                      lambda x: json.loads(x) if x else None)
+JSON_CODEC = SQLCodec(lambda x: json.dumps(x) if x else None, lambda x: json.loads(x) if x else None)
 
 
 @dataclass
@@ -24,31 +23,30 @@ class SQLSchema:
     keys: list[str]
 
     def __post_init__(self):
-        self.schema = self.schema.rstrip().rstrip(',')
+        self.schema = self.schema.rstrip().rstrip(",")
 
 
 class Schema(Protocol):
-
     @classmethod
     def to_sql_schema(cls) -> SQLSchema: ...
 
     @classmethod
     async def table_update(cls, name: str, verifier: Callable[[str], Awaitable[Cursor]]) -> str | None:
-        ''' A Handler for updating the tables schema
-            Parameters
-            ------------
-            name: :class:`str`
-            The name of the table
+        """A Handler for updating the tables schema
+        Parameters
+        ------------
+        name: :class:`str`
+        The name of the table
 
-            verifier: Callable[[str], Awaitable[Cursor]]
-                Check here if the table matches the required schema or not before returning the update.
-                Accepts an sql query and returns the queried value
-            
-            Returns
-            --------
-            :class:`str`
-                The table update sql command. Or NONE to not update the table
-        '''
+        verifier: Callable[[str], Awaitable[Cursor]]
+            Check here if the table matches the required schema or not before returning the update.
+            Accepts an sql query and returns the queried value
+
+        Returns
+        --------
+        :class:`str`
+            The table update sql command. Or NONE to not update the table
+        """
         ...
 
 
@@ -60,7 +58,7 @@ def encode_sql_obj(obj: S) -> dict[str, Any]:
     result = {}
     for key, field in obj.__annotations__.items():
         codec = JSON_CODEC if _is_json_supported_type__(field)[0] else None
-        if hasattr(field, '__metadata__'):
+        if hasattr(field, "__metadata__"):
             for metadata in field.__metadata__:
                 if isinstance(metadata, SQLCodec):
                     codec = metadata
@@ -76,9 +74,9 @@ def decode_sql_obj(sql_result: dict[str, Any], clss: Type[S]) -> S:
         if key not in clss.__annotations__:
             continue
         field = clss.__annotations__[key]
-        [factory, none] = _is_json_supported_type__(field)
+        factory, none = _is_json_supported_type__(field)
         codec = JSON_CODEC if factory else None
-        if hasattr(field, '__metadata__'):
+        if hasattr(field, "__metadata__"):
             for metadata in field.__metadata__:
                 if isinstance(metadata, SQLCodec):
                     codec = metadata
@@ -89,7 +87,7 @@ def decode_sql_obj(sql_result: dict[str, Any], clss: Type[S]) -> S:
     return clss(**result)
 
 
-def _is_json_supported_type__(field) -> bool:
+def _is_json_supported_type__(field) -> tuple[Any, bool]:
     factory = None
     orig = get_origin(field)
     if field is list or field is dict:
@@ -103,4 +101,4 @@ def _is_json_supported_type__(field) -> bool:
                 factory = arg
         if arg is type(None):  # For union type that allows NONE values
             allow_none = True
-    return [factory, allow_none]
+    return factory, allow_none

@@ -33,19 +33,19 @@ class LinkedUserData(Schema):
             "uuid": str(uuid.UUID(self.minecraft_uuid)),
             "name": self.minecraft_username,
             "tier": self.patreon_tier,
-            "defaultEffect": self.data.get('default_effect', "none") if self.data else "none"
+            "defaultEffect": self.data.get("default_effect", "none") if self.data else "none",
         }
         return out
 
     @classmethod
     def to_sql_schema(cls) -> SQLSchema:
-        schema: SQLSchema = SQLSchema(schema='''
+        schema: SQLSchema = SQLSchema(schema="""
                         user_id int(25) NOT NULL,
                         patreon_tier int(4) NOT NULL,
                         minecraft_uuid varchar(40) NOT NULL,
                         minecraft_username varchar(20) NOT NULL,
                         data json,
-                    ''', keys=['user_id'])
+                    """, keys=["user_id"])
         return schema
 
 
@@ -56,10 +56,10 @@ class GuildRoleConfig(Schema):
 
     @classmethod
     def to_sql_schema(cls) -> SQLSchema:
-        schema: SQLSchema = SQLSchema(schema='''
+        schema: SQLSchema = SQLSchema(schema="""
                         role int(25) NOT NULL,
                         tier int(4) NOT NULL,
-                    ''', keys=['role'])
+                    """, keys=["role"])
         return schema
 
 
@@ -68,7 +68,7 @@ class MinecraftLinker(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.logger = self.bot.logger.getChild("MinecraftLinker")
-        self.config = self.bot.get_config_for('minecraft_linker')
+        self.config = self.bot.get_config_for("minecraft_linker")
         self.data: CogDatabase[LinkedUserData] | None = None
         self.role_config: CogDatabase[GuildRoleConfig] | None = None
 
@@ -82,16 +82,16 @@ class MinecraftLinker(commands.Cog):
     async def cog_load(self):
         await self.load_db()
 
-    @group.command(name='get', description="Get Account Role Config")
+    @group.command(name="get", description="Get Account Role Config")
     async def get_linked_roles(self, interaction: discord.Interaction):
         roles = await self.role_config.get_all(interaction.guild.id)
-        self.logger.info(f'{interaction.guild.name}: Fetched role configs {roles}')
+        self.logger.info(f"{interaction.guild.name}: Fetched role configs {roles}")
         if roles:
-            desc = ''
+            desc = ""
             for role_config in roles:
                 role = discord.utils.get(interaction.guild.roles, id=int(role_config.role))
-                name = role.mention if role else f'Unknown ({role_config.role})'
-                desc += f'- {name} - {role_config.tier}  \n'
+                name = role.mention if role else f"Unknown ({role_config.role})"
+                desc += f"- {name} - {role_config.tier}  \n"
             embed = discord.Embed(
                 title="Roles",
                 description=desc,
@@ -103,25 +103,25 @@ class MinecraftLinker(commands.Cog):
             await interaction.response.send_message(
                 f"No roles configured. Use `/{MinecraftLinker.group.name} set` to configure some roles")
 
-    @group.command(name='set', description="Set role tier for account linking")
+    @group.command(name="set", description="Set role tier for account linking")
     @app_commands.describe(
         role="The role",
-        tier='The tier of the role'
+        tier="The tier of the role",
     )
     async def set_link_roles(self, interaction: discord.Interaction, role: discord.Role, tier: int):
-        self.logger.info(f'{interaction.guild.name}: Configuring role {role.name} with {tier}')
+        self.logger.info(f"{interaction.guild.name}: Configuring role {role.name} with {tier}")
         res = await self.role_config.upsert(interaction.guild.id, GuildRoleConfig(role.id, tier))
-        msg = f'Configured role {role.mention} for tier {tier}' if res else f'Could not configure for role {role.mention}'
+        msg = f"Configured role {role.mention} for tier {tier}" if res else f"Could not configure for role {role.mention}"
         await interaction.response.send_message(msg, allowed_mentions=False)
 
-    @group.command(name='remove', description="Remove a role tier from account linking")
+    @group.command(name="remove", description="Remove a role tier from account linking")
     @app_commands.describe(
         role="The role",
     )
     async def remove_link_roles(self, interaction: discord.Interaction, role: discord.Role):
-        self.logger.info(f'{interaction.guild.name}: Removing role config for {role.name}')
+        self.logger.info(f"{interaction.guild.name}: Removing role config for {role.name}")
         res = await self.role_config.remove(interaction.guild.id, role=role.id)
-        msg = f'Removed role {role} tier' if res else f'Could not remove role config {role.mention}'
+        msg = f"Removed role {role} tier" if res else f"Could not remove role config {role.mention}"
         await interaction.response.send_message(msg, allowed_mentions=False)
 
     @app_commands.command(description="Links your minecraft account to your discord account")
@@ -151,31 +151,34 @@ class MinecraftLinker(commands.Cog):
     async def mc_link_user(self, interaction: discord.Interaction, user: discord.Member, user_name: str,
                            overwrite=False):
         tier = await self.get_contributor_tier(user)
-        self.logger.info(f'{interaction.guild.name}: Attempting to link account {user_name} with tier {tier}')
+        self.logger.info(f"{interaction.guild.name}: Attempting to link account {user_name} with tier {tier}")
         is_self = interaction.user.id == user.id
         if tier == 0:
             await interaction.response.send_message(
                 "You do not have the required tiers" if is_self else "Target does not have the required tiers",
                 ephemeral=True,
-                delete_after=15 if interaction else None)
+                delete_after=15 if interaction else None
+            )
             return
         try:
-            send = requests.get(f'{MOJANG_API}{user_name}?', timeout=10)
+            send = requests.get(f"{MOJANG_API}{user_name}?", timeout=10)
         except asyncio.TimeoutError:
             await interaction.response.send_message("Timeout asking mojang servers", ephemeral=True,
                                                     delete_after=15 if interaction else None)
             return
         if send.ok:
             sender = user.id
-            self.logger.info(f'{interaction.guild.name}: Linking account {user_name} with id {sender} and tier {tier}')
-            result = send.json()['id']
+            self.logger.info(f"{interaction.guild.name}: Linking account {user_name} with id {sender} and tier {tier}")
+            result = send.json()["id"]
             user_data = await self.fetch_linked_for(interaction.guild.id, sender)
             exist = await self.existing_link_for(interaction.guild.id, result)
             if exist and (not user_data or user_data.user_id != sender):
                 if not overwrite:
                     await interaction.response.send_message(
-                        "This minecraft account is already linked with an discord account", ephemeral=True,
-                        delete_after=15 if interaction else None)
+                        "This minecraft account is already linked with an discord account",
+                        ephemeral=True,
+                        delete_after=15 if interaction else None
+                    )
                     return
                 await self.data.remove(interaction.guild.id, minecraft_uuid=result)
             if user_data:
@@ -188,7 +191,8 @@ class MinecraftLinker(commands.Cog):
                 await interaction.response.send_message(
                     "Linked your username with your discord account" if is_self else "Linked the username with the given discord account",
                     ephemeral=True,
-                    delete_after=15 if interaction else None)
+                    delete_after=15 if interaction else None
+                )
             if self.bot.config["log_channel"] != "":
                 await interaction.guild.get_channel(int(self.bot.config["log_channel"])).send(
                     f"{user.mention} linked their mc account")
@@ -204,7 +208,7 @@ class MinecraftLinker(commands.Cog):
         tier = await self.get_contributor_tier(before)
         tier_after = await self.get_contributor_tier(after)
         if tier != tier_after:
-            self.logger.info(f'{before.guild.name}: Tier changed for {after} to tier {tier_after}')
+            self.logger.info(f"{before.guild.name}: Tier changed for {after} to tier {tier_after}")
             res = False
             if tier_after == 0:
                 await asyncio.sleep(15)  # Add a delay in case the role was removed to update it with a new role
@@ -234,19 +238,19 @@ class MinecraftLinker(commands.Cog):
         return await self.data.get_all(guild.id)
 
     async def sync_with_gist(self, guild: discord.Guild):
-        if str(guild.name) != self.config['required_server']:
-            server_conf = self.config['required_server']
+        if str(guild.name) != self.config["required_server"]:
+            server_conf = self.config["required_server"]
             self.logger.info(
                 f'Guild {guild.name} with id {guild.id} does not match required "{server_conf}". Not syncing to gist!')
             return
         token = self.config["github_token"]
         if not token:
-            self.logger.info(f'Unable to sync to gist. No github token defined!')
+            self.logger.info(f"Unable to sync to gist. No github token defined!")
             return
-        file = self.config['gist_file']
-        gist_id = self.config['gist_id']
-        headers = {'Authorization': f'Bearer {self.config["github_token"]}'}
-        current = requests.get('https://api.github.com/gists/' + gist_id, headers=headers)
+        file = self.config["gist_file"]
+        gist_id = self.config["gist_id"]
+        headers = {"Authorization": f"Bearer {self.config['github_token']}"}
+        current = requests.get("https://api.github.com/gists/" + gist_id, headers=headers)
         if current.ok:
             content = current.json()["files"][file]["content"]  # Fetch current data
             content_json = json.loads(content)
@@ -254,14 +258,14 @@ class MinecraftLinker(commands.Cog):
             users = await self.fetch_all_linked_users(guild)
             for user in users:  # Add the data from the bot
                 new_data.append(user.gist_formatted())
-            ignored = get_single_or_list(self.config, 'ignored_users')
+            ignored = get_single_or_list(self.config, "ignored_users")
             for c in content_json:
                 if c["uuid"] in ignored:
                     new_data.append(c)
             if new_data != content_json:  # Only update if changed
                 out = json.dumps(new_data, default=vars, indent=2).replace("'", '"')  # Format the data
-                r = requests.patch('https://api.github.com/gists/' + gist_id,
-                                   data=json.dumps({'files': {file: {"content": out}}}, default=vars, indent=4),
+                r = requests.patch("https://api.github.com/gists/" + gist_id,
+                                   data=json.dumps({"files": {file: {"content": out}}}, default=vars, indent=4),
                                    headers=headers)
                 if not r.ok:
                     self.logger.error("Couldn't update remote data!")

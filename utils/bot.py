@@ -22,29 +22,26 @@ class BotConfig(Schema):
 
     @classmethod
     def to_sql_schema(cls) -> SQLSchema:
-        schema: SQLSchema = SQLSchema(schema='''
+        schema: SQLSchema = SQLSchema(
+            schema="""
                         log_channel int(25) NOT NULL,
-                    ''', keys=[])
+                    """,
+            keys=[],
+        )
         return schema
-
-
-LogChannelHandler = Callable[
-    [discord.TextChannel],
-    Awaitable[None]
-]
 
 
 class Bot(commands.Bot):
     def __init__(self, *, intents: Intents, config: dict, logger: Logger, data_directory: str):
-        super().__init__(intents=intents, command_prefix=config.get('prefix', '!'), max_messages=3000)
+        super().__init__(intents=intents, command_prefix=config.get("prefix", "!"), max_messages=3000)
         self.directory = os.path
         self.logger = logger
         self.database: BotDatabase | None = None
         self.config = config
         self.data_directory = data_directory
-        self.__base_data_dir__ = self.get_dir_with('database')
+        self.__base_data_dir__ = self.get_dir_with("database")
         self.event(self.on_ready)
-        self.main_config: CogDatabase[BotConfig] = None
+        self.main_config: CogDatabase[BotConfig] | None = None
         self._temp_banning: list[tuple[int, int]] = []
 
     def get_config_for(self, path: str):
@@ -61,16 +58,15 @@ class Bot(commands.Bot):
     async def load_db(self) -> None:
         db_path = f"{self.__base_data_dir__}/database.db"
         self.logger.info("Loading Bot Database at %s", db_path)
-        self.database = BotDatabase(logger=self.logger,
-                                    connection=await aiosqlite.connect(db_path))
+        self.database = BotDatabase(logger=self.logger, connection=await aiosqlite.connect(db_path))
         self.main_config = await self.database.get_for("Bot", "config", BotConfig)
 
     async def load_cogs(self) -> None:
         self.logger.info("Loading Cogs")
-        for path, _, files in os.walk('./cogs'):
+        for path, _, files in os.walk("./cogs"):
             for file_name in files:
-                if file_name.endswith('.py'):
-                    extension = f'{path.replace("./cogs", "cogs").replace("/", ".")}.{file_name[:-3]}'
+                if file_name.endswith(".py"):
+                    extension = f"{path.replace('./cogs', 'cogs').replace('/', '.')}.{file_name[:-3]}"
                     self.logger.info("Loading extension: %s", extension)
                     try:
                         await self.load_extension(extension)
@@ -98,8 +94,7 @@ class Bot(commands.Bot):
         if isinstance(exception, MissingRequiredArgument):
             await ctx.reply(
                 f"Missing arguments for command. {{{exception.param.displayed_name or exception.param.name}}} is required!",
-                ephemeral=True,
-                delete_after=15)
+                ephemeral=True, delete_after=15)
             return None
         return await super().on_command_error(ctx, exception)
 
@@ -120,7 +115,7 @@ class Bot(commands.Bot):
         ).set_author(name=user.display_name, url=None, icon_url=user.display_avatar)
         await self.send_mod_log(guild, lambda ch: ch.send(embed=embed))
 
-    async def send_mod_log(self, guild: discord.Guild, handler: LogChannelHandler):
+    async def send_mod_log(self, guild: discord.Guild, handler: Callable[[discord.TextChannel], Awaitable[None]]):
         channel = await self.get_log_channel(guild)
         if channel:
             await handler(channel)
@@ -139,21 +134,21 @@ class MainCog(commands.Cog):
     )
     async def set_log_channel(self, interaction: Interaction, channel: Optional[TextChannel]):
         self.logger.info(
-            f'Setting bots log channel to {channel.name if channel else "none"} for guild {interaction.guild.name}')
+            f"Setting bots log channel to {channel.name if channel else 'none'} for guild {interaction.guild.name}")
         config = await self.main_config.get(interaction.guild.id)
         if not config:
             config = BotConfig(0)
         config.log_channel = channel.id if channel else 0
         await self.main_config.upsert(interaction.guild.id, config)
         await interaction.response.send_message(
-            f'Log channel set to {channel.mention}' if channel else f'Removed log channel')
+            f"Log channel set to {channel.mention}" if channel else f"Removed log channel")
 
     @app_commands.command(name="get_log_channel", description="Gets the channel for bot logs")
     @app_commands.default_permissions(Permissions(administrator=True))
     async def get_log_channel(self, interaction: Interaction):
-        self.logger.info(f'Getting bots log channel for guild {interaction.guild.name}')
+        self.logger.info(f"Getting bots log channel for guild {interaction.guild.name}")
         config = await self.main_config.get(interaction.guild.id)
         if not config:
-            await interaction.response.send_message('No log channel is set')
+            await interaction.response.send_message("No log channel is set")
             return
-        await interaction.response.send_message(f'Log channel is set to <#{config.log_channel}>')
+        await interaction.response.send_message(f"Log channel is set to <#{config.log_channel}>")

@@ -3,7 +3,6 @@ import logging.handlers
 import os
 import shutil
 import sys
-import time
 from pathlib import Path
 
 import discord
@@ -13,10 +12,10 @@ from ruamel.yaml import YAML, CommentedMap
 from utils.bot import Bot
 
 DIR = Path(__file__).resolve().parent
-CONFIG_SCHEMA = f'{DIR}/utils/config_schema.yml'
+CONFIG_SCHEMA = f"{DIR}/utils/config_schema.yml"
 
-DATA_PATH = os.environ.get('DATA', './data')
-CONFIG_PATH = os.environ.get('CONFIG', f'./config.yml')
+DATA_PATH = os.environ.get("DATA", "./data")
+CONFIG_PATH = os.environ.get("CONFIG", f"./config.yml")
 
 
 def path_from(path_str: str) -> Path:
@@ -24,12 +23,12 @@ def path_from(path_str: str) -> Path:
     if path.is_absolute():
         return path.resolve()
     else:
-        return Path(f'{DIR}/{path}').resolve()
+        return Path(f"{DIR}/{path}").resolve()
 
 
 DATA_DIR = path_from(DATA_PATH)
 CONFIG_FILE = DATA_DIR / CONFIG_PATH
-LOGGER_DIR = DATA_DIR / 'logs'
+LOGGER_DIR = DATA_DIR / "logs"
 
 try:
     os.makedirs(DATA_DIR)
@@ -84,7 +83,7 @@ def from_schema(result, ref):
 def collect_keys(source, path: str, keys: set[str]):
     if isinstance(source, ycm.CommentedMap):
         for key in source:
-            key_path = f'{path}.{key}'
+            key_path = f"{path}.{key}"
             keys.add(key_path)
             collect_keys(source[key], key_path, keys)
     return keys
@@ -96,45 +95,44 @@ yaml.preserve_quotes = True
 exists = os.path.exists(CONFIG_FILE)
 if not exists:
     shutil.copyfile(CONFIG_SCHEMA, CONFIG_FILE)
-with open(CONFIG_FILE, 'r') as f:
+with open(CONFIG_FILE, "r") as f:
     config: CommentedMap = yaml.load(f)
 
 # Setup Loggers
-logger = logging.getLogger(config.get('name', 'Bot'))
-logger.setLevel('INFO')
+logger = logging.getLogger(config.get("name", "Bot"))
+logger.setLevel("INFO")
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(LogFormatting())
 logger.addHandler(console_handler)
 
-file_handler = logging.handlers.TimedRotatingFileHandler(filename=f'{LOGGER_DIR}/bot.log', encoding="utf-8", when="D")
-file_handler_formatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] %(name)s - %(message)s", "%Y-%m-%d %H:%M:%S")
+file_handler = logging.handlers.TimedRotatingFileHandler(filename=f"{LOGGER_DIR}/bot.log", encoding="utf-8", when="D")
+file_handler_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s - %(message)s", "%Y-%m-%d %H:%M:%S")
 file_handler.setFormatter(file_handler_formatter)
 logger.addHandler(file_handler)
 
 if exists:
-    with open(CONFIG_SCHEMA, 'r') as f:
+    with open(CONFIG_SCHEMA, "r") as f:
         schema: CommentedMap = yaml.load(f)
         currentKeys = collect_keys(config, "", set())
         schemaKeys = collect_keys(schema, "", set())
         # Config keys mismatch. Try merging
         if len(schemaKeys.difference(currentKeys)) > 0:
             from_schema(schema, config)
-            logger.name = schema.get('name', logger.name)
+            logger.name = schema.get("name", logger.name)
             logger.info("Mismatching config. Updating")
             back = 0
-            while os.path.exists(f'{CONFIG_FILE}.back{back if back > 0 else ""}'):
+            while os.path.exists(f"{CONFIG_FILE}.back{back if back > 0 else ''}"):
                 back += 1
-            with open(f'{CONFIG_FILE}.back{back if back > 0 else ""}', 'w') as f:
-                yaml.dump(config, f)
-            with open(CONFIG_FILE, 'w') as f:
-                yaml.dump(schema, f)
+            with open(f"{CONFIG_FILE}.back{back if back > 0 else ''}", "w") as cf:
+                yaml.dump(config, cf)
+            with open(CONFIG_FILE, "w") as cf:
+                yaml.dump(schema, cf)
             config = schema
 else:
     logger.error(f"A new config has been created at {CONFIG_FILE}!")
     sys.exit(1)
 
-logger.setLevel(config.get('logging_level', 'INFO'))
+logger.setLevel(config.get("logging_level", "INFO"))
 logger.info(f"Config file path: {CONFIG_FILE}")
 
 if not config["bot_token"]:
