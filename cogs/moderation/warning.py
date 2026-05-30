@@ -98,7 +98,7 @@ class Warning(commands.Cog):
             by: sorted(warning, key=lambda w: w.created_at)
             for by, warning in all_warnings.items()
         }
-        desc = f"User: {user.mention} - severity of Warnings {severity}\n"
+        desc = f"User: {user.mention} - Severity of Warnings **{severity}**\n\n"
         for (by, warnings) in all_warnings.items():
             desc += f"Issuer: <@{by}>\n"
             for warning in warnings:

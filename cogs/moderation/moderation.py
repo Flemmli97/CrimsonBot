@@ -121,7 +121,7 @@ class Moderation(commands.Cog):
         current = await self.temp_bans.get(guild.id, user=user.id)
         if current and current.banned_till > end_time:
             return current
-        self.logger.info(f'{guild.name}: Temporary banning {user.name}{f' {reason}' if reason else ''} till {end_time}')
+        self.logger.info(f'{guild.name}: Temporary banning {user.name}{f" {reason}" if reason else ""} till {end_time}')
         self.bot._temp_banning.append((guild.id, user.id))
         reason_str = f': **{reason}**' if reason else ''
         await user.send(f"You got banned from {guild.name} till <t:{round(end_time.timestamp())}:s>{reason_str}")
