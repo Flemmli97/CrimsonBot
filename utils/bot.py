@@ -144,3 +144,13 @@ class MainCog(commands.Cog):
         await self.main_config.upsert(interaction.guild.id, config)
         await interaction.response.send_message(
             f'Log channel set to {channel.mention}' if channel else f'Removed log channel')
+
+    @app_commands.command(name="get_log_channel", description="Gets the channel for bot logs")
+    @app_commands.default_permissions(Permissions(administrator=True))
+    async def get_log_channel(self, interaction: Interaction):
+        self.logger.info(f'Getting bots log channel for guild {interaction.guild.name}')
+        config = await self.main_config.get(interaction.guild.id)
+        if not config:
+            await interaction.response.send_message('No log channel is set')
+            return
+        await interaction.response.send_message(f'Log channel is set to <#{config.log_channel}>')
