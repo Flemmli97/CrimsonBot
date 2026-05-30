@@ -36,7 +36,7 @@ LogChannelHandler = Callable[
 
 class Bot(commands.Bot):
     def __init__(self, *, intents: Intents, config: dict, logger: Logger, data_directory: str):
-        super().__init__(intents=intents, command_prefix=config.get('prefix', '!'))
+        super().__init__(intents=intents, command_prefix=config.get('prefix', '!'), max_messages=3000)
         self.directory = os.path
         self.logger = logger
         self.database: BotDatabase | None = None
