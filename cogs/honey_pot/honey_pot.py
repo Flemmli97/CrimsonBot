@@ -95,7 +95,7 @@ class Honeypot(commands.Cog):
         if current and user.id in current.ignored_users:
             current.ignored_users = [c for c in current.ignored_users if c != user.id]
             if current.empty():
-                res = await self.data.remove(interaction.guild.id)
+                res = await self.data.clear_guild_data(interaction.guild.id)
             else:
                 res = await self.data.upsert(interaction.guild.id, current)
         msg = f"Not ignoring messages from {user.mention} for honeypot triggers anymore" if res else f"Could not remove user {user.mention} to ignore for honeypot triggers"
@@ -105,7 +105,7 @@ class Honeypot(commands.Cog):
     @app_commands.describe(
         role="The role to to ignore",
     )
-    async def ignore_user(self, interaction: discord.Interaction, role: discord.Role):
+    async def ignore_role(self, interaction: discord.Interaction, role: discord.Role):
         self.logger.info(f"{interaction.guild.name}: Adding role to ignore for honeypots {role.name}")
         current = await self.get_config(interaction.guild)
         if current and role.id not in current.ignored_roles:
@@ -120,13 +120,13 @@ class Honeypot(commands.Cog):
     @app_commands.describe(
         role="The role to remove",
     )
-    async def unignore_usesr(self, interaction: discord.Interaction, role: discord.Role):
+    async def unignore_role(self, interaction: discord.Interaction, role: discord.Role):
         self.logger.info(f"{interaction.guild.name}: Removing the role {role.name} to ignore for honeypots ignore list")
         current = await self.get_config(interaction.guild)
         if current and role.id in current.ignored_roles:
             current.ignored_roles = [c for c in current.ignored_roles if c != role.id]
             if current.empty():
-                res = await self.data.remove(interaction.guild.id)
+                res = await self.data.clear_guild_data(interaction.guild.id)
             else:
                 res = await self.data.upsert(interaction.guild.id, current)
         msg = f"Not ignoring messages from {role.mention} for honeypot triggers anymore" if res else f"Could not remove role {role.mention} to ignore for honeypot triggers"

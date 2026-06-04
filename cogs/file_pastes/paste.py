@@ -101,7 +101,7 @@ class FilePaste(commands.Cog):
         if current and channel.id in current.channels:
             current.channels = [c for c in current.channels if c != channel.id]
             if len(current.channels) == 0 and len(current.channel_categories) == 0:
-                res = await self.configs_db.remove(interaction.guild.id)
+                res = await self.configs_db.clear_guild_data(interaction.guild.id)
             else:
                 res = await self.configs_db.upsert(interaction.guild.id, current)
         msg = f"Added channel {channel.mention} to paste whitelist" if res else f"Could not add channel {channel.mention} to paste whitelist"
@@ -132,7 +132,7 @@ class FilePaste(commands.Cog):
         if current and category.id in current.channel_categories:
             current.channel_categories = [c for c in current.channel_categories if c != category.id]
             if len(current.channels) == 0 and len(current.channel_categories) == 0:
-                res = await self.configs_db.remove(interaction.guild.id)
+                res = await self.configs_db.clear_guild_data(interaction.guild.id)
             else:
                 res = await self.configs_db.upsert(interaction.guild.id, current)
         msg = f"Added category {category.mention} to paste whitelist" if res else f"Could not add category {category.mention} to paste whitelist"
