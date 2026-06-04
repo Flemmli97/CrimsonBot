@@ -203,6 +203,7 @@ class Automod(commands.Cog):
                 rule.name.startswith(current)][:25]
 
     @app_commands.command(name="automodignore", description="Ignores messages from given roles for automod")
+    @app_commands.default_permissions(discord.Permissions(administrator=True))
     @app_commands.describe(
         role="The role to to ignore",
     )
@@ -218,6 +219,7 @@ class Automod(commands.Cog):
         await interaction.response.send_message(msg)
 
     @app_commands.command(name="automodunignore", description="Unignores messages from given roles again for automod")
+    @app_commands.default_permissions(discord.Permissions(administrator=True))
     @app_commands.describe(
         role="The role to remove",
     )
