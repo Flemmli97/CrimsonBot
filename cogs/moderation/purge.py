@@ -70,35 +70,35 @@ class PurgeCommand(commands.Cog):
         self.logger = self.bot.logger.getChild("Moderation")
 
     group = app_commands.Group(name="purge", description="Purges messages",
-                               default_permissions=discord.Permissions(administrator=True))
+                               default_permissions=discord.Permissions(manage_messages=True))
 
     @group.command(name="amount", description="Purges x recent messages")
-    @app_commands.default_permissions(discord.Permissions(administrator=True))
+    @app_commands.default_permissions(discord.Permissions(manage_messages=True))
     async def purge_amount(self, interaction: discord.Interaction, amount: int):
         await self._purge(interaction=interaction, amount=amount)
 
     @group.command(name="after", description="Purge x messages after the given one")
-    @app_commands.default_permissions(discord.Permissions(administrator=True))
+    @app_commands.default_permissions(discord.Permissions(manage_messages=True))
     async def purge_after(self, interaction: discord.Interaction, after: int, amount: Optional[int]):
         await self._purge(interaction=interaction, after=discord.Object(after), amount=amount, oldest_first=True)
 
     @group.command(name="bots", description="Purges x recent bot messages")
-    @app_commands.default_permissions(discord.Permissions(administrator=True))
+    @app_commands.default_permissions(discord.Permissions(manage_messages=True))
     async def purge_bots(self, interaction: discord.Interaction, amount: int):
         await self._purge(interaction=interaction, check=lambda msg: msg.author.bot, amount=amount)
 
     @group.command(name="regex", description="Purges x recent messages based on a regex")
-    @app_commands.default_permissions(discord.Permissions(administrator=True))
+    @app_commands.default_permissions(discord.Permissions(manage_messages=True))
     async def purge_regex(self, interaction: discord.Interaction, amount: int, regex: str):
         await self._purge(interaction=interaction, check=lambda msg: re.search(regex, msg.content), amount=amount)
 
     @group.command(name="links", description="Purges x recent messages with links")
-    @app_commands.default_permissions(discord.Permissions(administrator=True))
+    @app_commands.default_permissions(discord.Permissions(manage_messages=True))
     async def purge_links(self, interaction: discord.Interaction, amount: int):
         await self._purge(interaction=interaction, check=lambda msg: URL_REGEX.match(msg.content), amount=amount)
 
     @group.command(name="user", description="Purges x recent messages from the given user")
-    @app_commands.default_permissions(discord.Permissions(administrator=True))
+    @app_commands.default_permissions(discord.Permissions(manage_messages=True))
     async def purge_user(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         await self._purge(interaction=interaction, check=lambda msg: msg.author.id == user.id, amount=amount)
 

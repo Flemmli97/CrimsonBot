@@ -35,7 +35,9 @@ class WarningEntry(Schema):
 
 
 class Warning(commands.Cog):
-
+    """
+    Implements a warning system. Since discord has nothing equal all commands require kick_members by default
+    """
     def __init__(self, bot: Bot):
         self.bot = bot
         self.logger = self.bot.logger.getChild("Moderation")
@@ -48,7 +50,7 @@ class Warning(commands.Cog):
         await self.load_db()
 
     @app_commands.command(name="warn", description="Warns a user")
-    @app_commands.default_permissions(discord.Permissions(administrator=True))
+    @app_commands.default_permissions(discord.Permissions(kick_members=True))
     @app_commands.describe(
         user="The user to warn",
         reason="The reason for the warn",
@@ -80,7 +82,7 @@ class Warning(commands.Cog):
         )
 
     @app_commands.command(name="warnings", description="Gets all warnings for a user")
-    @app_commands.default_permissions(discord.Permissions(administrator=True))
+    @app_commands.default_permissions(discord.Permissions(kick_members=True))
     @app_commands.describe(
         user="The user",
     )
@@ -109,7 +111,7 @@ class Warning(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="delwarn", description="Deletes a warning from a user")
-    @app_commands.default_permissions(discord.Permissions(administrator=True))
+    @app_commands.default_permissions(discord.Permissions(kick_members=True))
     @app_commands.describe(
         user="The user whoses warnings should be deleted",
         id="Id of the warn",
@@ -131,7 +133,7 @@ class Warning(commands.Cog):
                                           interaction.user)
 
     @app_commands.command(name="clearwarns", description="Clears all warnings from a user")
-    @app_commands.default_permissions(discord.Permissions(administrator=True))
+    @app_commands.default_permissions(discord.Permissions(kick_members=True))
     @app_commands.describe(
         user="The user to clear",
     )

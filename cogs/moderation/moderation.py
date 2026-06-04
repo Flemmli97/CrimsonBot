@@ -41,7 +41,7 @@ class Moderation(commands.Cog):
         await self.load_db()
 
     @app_commands.command(name="softban", description="Softbans (ban and unbans) user to delete all recent messages")
-    @app_commands.default_permissions(discord.Permissions(administrator=True))
+    @app_commands.default_permissions(discord.Permissions(ban_members=True))
     @app_commands.describe(
         user="The user to ban",
         delete_days="How far back messages will be deleted. Default is 3 days",
@@ -59,7 +59,7 @@ class Moderation(commands.Cog):
                                           interaction.user)
 
     @app_commands.command(name="slowmode", description="Sets slowmode for chat")
-    @app_commands.default_permissions(discord.Permissions(administrator=True))
+    @app_commands.default_permissions(discord.Permissions(manage_channels=True))
     @app_commands.describe(
         channel="The channel in which to enable slowmode. Defaults to the current channel",
         time="Duration for slowmode in seconds. If 0 removes slowmode. Defaults to 0",
@@ -90,7 +90,7 @@ class Moderation(commands.Cog):
         )
 
     @app_commands.command(name="tempban", description="Bans a user for the given duration")
-    @app_commands.default_permissions(discord.Permissions(administrator=True))
+    @app_commands.default_permissions(discord.Permissions(ban_members=True))
     @app_commands.describe(
         user="User to ban",
         duration_minutes="Duration in minutes to ban for",
