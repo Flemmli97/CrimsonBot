@@ -128,7 +128,7 @@ class Moderation(commands.Cog):
 
     async def temp_ban(
             self, guild: discord.Guild, user: discord.Member, end_time: datetime, reason: Optional[str],
-            delete_days: int | None = None, delete_seconds: int | None = None
+            delete_days: int = discord.utils.MISSING, delete_seconds: int = discord.utils.MISSING
     ):
         current = await self.temp_bans.get(guild.id, user=user.id)
         if current and current.banned_till > end_time:
