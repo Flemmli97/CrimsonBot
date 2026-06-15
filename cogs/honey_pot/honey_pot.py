@@ -176,8 +176,8 @@ class Honeypot(commands.Cog):
                 return
         self.logger.info(f"HONEYPOT - {message.author.name} in {message.guild.name}: {message.content}")
         mod: Moderation = self.bot.get_cog("Moderation")
-        await mod.temp_ban(message.guild, message.author, datetime.now(timezone.utc) + timedelta(minutes=15),
-                           reason="Talking in the honeypot", delete_seconds=60)
+        await mod.temp_ban(message.guild, message.author, datetime.now(timezone.utc) + timedelta(hours=3),
+                           reason="Talking in the honeypot", delete_seconds=60 * 15)
 
 
 async def setup(bot: Bot) -> None:
