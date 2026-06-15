@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from typing import Callable, Awaitable, Any
 
 import discord
 from discord import app_commands
@@ -16,6 +17,7 @@ class HoneypotConfig(Schema):
     channel: None | int
     ignored_roles: list[int]
     ignored_users: list[int]
+    ban_duration_min: int | None
 
     @classmethod
     def to_sql_schema(cls) -> SQLSchema:
@@ -23,11 +25,39 @@ class HoneypotConfig(Schema):
                         channel int(25),
                         ignored_roles json,
                         ignored_users json,
+                        ban_duration_min int(25),
                     """, keys=[])
         return schema
 
+    @classmethod
+    def version(cls) -> int | None:
+        return 2
+
+    @classmethod
+    async def table_update(cls, table: str, updater: Callable[[str], Awaitable[Any]]) -> dict[int, Callable[
+        [], Awaitable[Any]]] | None:
+        return {
+            2: lambda: updater(f"ALTER TABLE {table} ADD COLUMN ban_duration_min int(25)")
+        }
+
     def empty(self) -> bool:
         return not self.channel and len(self.ignored_roles) == 0 and len(self.ignored_users) == 0
+
+    def ban_duration(self):
+        return self.ban_duration_min or 60 * 3
+
+
+def format_min(minutes: int) -> str:
+    days, rem = divmod(minutes, 1440)
+    hours, mins = divmod(rem, 60)
+    times = []
+    if days:
+        times.append(f"{days}d")
+    if hours:
+        times.append(f"{hours}h")
+    if mins:
+        times.append(f"{mins}m")
+    return " ".join(times) or "0m"
 
 
 class Honeypot(commands.Cog):
@@ -68,6 +98,21 @@ class Honeypot(commands.Cog):
             current = HoneypotConfig(channel.id, [], [])
         res = await self.data.upsert(interaction.guild.id, current)
         msg = f"Set honeypot channel to {channel.mention}" if res else f"Could not set honeypot channel"
+        await interaction.response.send_message(msg, allowed_mentions=False)
+
+    @group.command(name="banduration", description="Sets the ban duration")
+    @app_commands.describe(
+        duration="The ban duration in minutes",
+    )
+    async def set_honeypot_channel(self, interaction: discord.Interaction, duration: int):
+        self.logger.info(f"{interaction.guild.name}: Setting honeypot ban duration to {duration}")
+        current = await self.get_config(interaction.guild)
+        if current:
+            current.ban_duration_min = duration
+        else:
+            current = HoneypotConfig(None, [], [], duration)
+        res = await self.data.upsert(interaction.guild.id, current)
+        msg = f"Set honeypot ban duration to {duration} minutes" if res else f"Could not set honeypot ban duration"
         await interaction.response.send_message(msg, allowed_mentions=False)
 
     @user_group.command(name="ignore", description="Ignores messages from given user")
@@ -148,9 +193,11 @@ class Honeypot(commands.Cog):
                 role = discord.utils.get(interaction.guild.roles, id=role_id)
                 name = role.mention if role else f"Unknown ({role_id})"
                 roles.append(name)
+            ban_min = config.ban_duration_min or 60 * 3
+
             embed = discord.Embed(
                 title=f"Honeypot setup in {channel.mention}" if channel else "Honeypot channel not set",
-                description=f"> Ignored Users: {', '.join(users)}  \n  \n> Ignored Roles: {', '.join(roles)}",
+                description=f"Ban duration: {format_min(config.ban_duration())}\n> Ignored Users: {', '.join(users)}  \n  \n> Ignored Roles: {', '.join(roles)}",
                 color=EMBED_COLOR
             )
             await interaction.response.send_message("Current honeypot configs on this server", embed=embed,
@@ -178,7 +225,8 @@ class Honeypot(commands.Cog):
                 return
         self.logger.info(f"HONEYPOT - {message.author.name} in {message.guild.name}: {message.content}")
         mod: Moderation = self.bot.get_cog("Moderation")
-        await mod.temp_ban(message.guild, message.author, datetime.now(timezone.utc) + timedelta(hours=3),
+        await mod.temp_ban(message.guild, message.author,
+                           datetime.now(timezone.utc) + timedelta(minutes=config.ban_duration()),
                            reason="Talking in the honeypot", delete_seconds=60 * 15)
 
 

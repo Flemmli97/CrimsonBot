@@ -31,21 +31,27 @@ class Schema(Protocol):
     def to_sql_schema(cls) -> SQLSchema: ...
 
     @classmethod
-    async def table_update(cls, name: str, verifier: Callable[[str], Awaitable[Cursor]]) -> str | None:
+    def version(cls) -> int | None:
+        """The current version of this schema. 1 if undefined
+        """
+        ...
+
+    @classmethod
+    async def table_update(cls, table: str, updater: Callable[[str], Awaitable[Any]]) -> dict[int, Callable[
+        [], Awaitable[Any]]] | None:
         """A Handler for updating the tables schema
         Parameters
         ------------
-        name: :class:`str`
+        table: :class:`str`
         The name of the table
 
-        verifier: Callable[[str], Awaitable[Cursor]]
-            Check here if the table matches the required schema or not before returning the update.
-            Accepts an sql query and returns the queried value
+        updater: Callable[[str], Awaitable[Any]]
+        Runs a sql query
 
         Returns
         --------
-        :class:`str`
-            The table update sql command. Or NONE to not update the table
+        :class:`dict[int, Callable[[], Awaitable[Any]]]`
+            A mapping of version - update
         """
         ...
 

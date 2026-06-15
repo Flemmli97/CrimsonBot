@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from logging import Logger
 from textwrap import dedent
 from typing import Generic, Type
@@ -7,6 +8,12 @@ import aiosqlite
 from utils.sqlutils import S, COG, SQLSchema, encode_sql_obj, decode_sql_obj
 
 GUILD_ID = "guild_id"
+DEFAULT_VERSION = 1
+
+
+@dataclass
+class SchemaConfig:
+    version: int
 
 
 class CogDatabase(Generic[S]):
@@ -88,9 +95,39 @@ class BotDatabase:
     def __init__(self, logger: Logger, connection: aiosqlite.Connection):
         self._connection = connection
         self._logger = logger
+        self.version = False
 
     async def close(self):
         await self._connection.close()
+
+    async def _fetch_schema_db(self):
+        op = dedent(f"""
+        CREATE TABLE IF NOT EXISTS sql_table_schema (
+            version int(40) NOT NULL,
+            database_id varchar(25) NOT NULL PRIMARY KEY
+        );""").lstrip()
+        await self._connection.executescript(op)
+        await self._connection.commit()
+
+    async def _current_schema_version(self, table: str) -> int:
+        if not self.version:
+            await self._fetch_schema_db()
+            self.version = True
+        async with self._connection.cursor() as cursor:
+            await cursor.execute(f"SELECT version FROM sql_table_schema WHERE database_id=?", (table,))
+            result = await cursor.fetchone()
+            if result:
+                return result[0]
+            return DEFAULT_VERSION
+
+    async def _update_current_schema_version(self, table: str, version: int):
+        if not self.version:
+            await self._fetch_schema_db()
+            self.version = True
+        async with self._connection.cursor() as cursor:
+            await cursor.execute(
+                f"REPLACE INTO sql_table_schema (database_id, version) values (?, ?)", (table, version))
+            await self._connection.commit()
 
     async def _register_table(self, identifier: COG, table: str, schema: Type[S]):
         sql: SQLSchema = schema.to_sql_schema()
@@ -107,17 +144,26 @@ class BotDatabase:
         await self._connection.executescript(op)
         await self._connection.commit()
 
-        async def run(s: str):
-            return await self._connection.executescript(s)
+        current_version = await self._current_schema_version(table=table)
 
-        updater = await schema.table_update(table, run)
-        if updater:
-            op = f"""
-            ALTER TABLE {table}
-            {updater}
-            """
-            await self._connection.executescript(op)
-            await self._connection.commit()
+        ran_script = False
+
+        async def run(script: str):
+            nonlocal ran_script
+            ran_script = True
+            return await self._connection.executescript(script)
+
+        updates = await schema.table_update(table, run)
+        if updates:
+            versions = sorted(updates.keys())
+            for version in versions:
+                if current_version >= version:
+                    break
+                self._logger.info(f"Migrating database schema for {table} to {version}")
+                await updates[version]()
+            if ran_script:
+                await self._connection.commit()
+        await self._update_current_schema_version(table=table, version=schema.version() or DEFAULT_VERSION)
         return table
 
     async def get_for(self, identifier: COG, table: str, schema: Type[S]) -> CogDatabase[S]:
