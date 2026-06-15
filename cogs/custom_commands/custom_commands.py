@@ -74,40 +74,9 @@ class CustomCommands(commands.Cog):
             await interaction.response.send_message(
                 f"Command {command} exists already. Use replace option to overwrite it", ephemeral=True)
             return
-        await interaction.response.defer(ephemeral=True)
-        follow = await interaction.followup.send(
-            f"Creating a custom command `{command}`. Send either text or a json file for setup", ephemeral=True,
-            wait=True)
-        res = await self.bot.wait_for(
-            "message",
-            check=lambda x: x.channel.id == interaction.channel.id and x.author.id == interaction.user.id,
-            timeout=60,
-        )
-        if len(res.attachments) == 1:
-            attachment = res.attachments[0]
-            if not attachment.filename.endswith((".txt", ".json")):
-                await interaction.edit_original_response(
-                    content=f"Unsupported file. Only .json and .txt files are supported!")
-                return
-            output = await attachment.to_file()
-            content: dict = json.loads(output.fp.read().decode("UTF-8"))
-            content = {
-                "content": content.get("content"),
-                "embeds": content.get("embeds"),
-            }
-        else:
-            content = {"content": res.content}
-        try:
-            await follow.delete()
-            await res.delete()
-        except HTTPException:
-            pass
-        entry = CustomCommandsEntry(command, content)
-        self.logger.info(f"{interaction.guild.name}: Created custom command {entry}")
-        await self.data.upsert(interaction.guild.id, entry)
-        msg = self.message_from_json(entry.message)
-        msg["content"] = f"> Setup custom command `{command}`\n=====\n{msg['content'] if msg['content'] else ''}"
-        await interaction.edit_original_response(**msg)
+        await interaction.response.send_message(
+            f"Creating a custom command `{command}`. What type is the command?", ephemeral=True,
+            view=CommandTypeView(cog=self, command=command))
 
     @group.command(name="remove", description="Remove a custom command")
     @app_commands.describe(
@@ -210,6 +179,112 @@ class CustomCommands(commands.Cog):
             "embeds": [discord.Embed.from_dict(e) for e in message.get("embeds", [])]
         }
         return msg
+
+
+class CommandTypeView(discord.ui.View):
+    def __init__(self, cog: CustomCommands, command: str):
+        super().__init__()
+        self.cog = cog
+        self.command = command
+
+    @discord.ui.button(label="Plain Text", style=discord.ButtonStyle.green)
+    async def text(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(SimpleCommand(embed=False, cog=self.cog, command=self.command))
+
+    @discord.ui.button(label="Simple Embed", style=discord.ButtonStyle.green)
+    async def embed(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(SimpleCommand(embed=True, cog=self.cog, command=self.command))
+
+    @discord.ui.button(label="Custom Message", style=discord.ButtonStyle.green)
+    async def custom(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(ComplexCommand(cog=self.cog, command=self.command))
+
+
+class SimpleCommand(discord.ui.Modal):
+
+    def __init__(self, embed: bool, cog: CustomCommands, command: str):
+        super().__init__(title="Simple embed command" if embed else "Text command")
+        self.embed = embed
+        self.cog = cog
+        self.command = command
+
+    message = discord.ui.TextInput(
+        label="Message",
+        style=discord.TextStyle.paragraph,
+        placeholder="Message the bot responds with",
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        if self.embed:
+            embed = discord.Embed(description=self.message.value, color=EMBED_COLOR).to_dict()
+            entry = CustomCommandsEntry(command=self.command, message={"embeds": [embed]})
+        else:
+            entry = CustomCommandsEntry(command=self.command, message={"content": self.message.value})
+        self.cog.logger.info(f"{interaction.guild.name}: Created custom command {entry}")
+        await self.cog.data.upsert(interaction.guild.id, entry)
+        msg = self.cog.message_from_json(entry.message)
+        msg["content"] = f"> Setup custom command `{self.command}`\n=====\n{msg['content'] if msg['content'] else ''}"
+        await interaction.response.send_message(**msg, ephemeral=True)
+
+
+class ComplexCommand(discord.ui.Modal):
+
+    def __init__(self, cog: CustomCommands, command: str):
+        super().__init__(title="Custom command message")
+        self.cog = cog
+        self.command = command
+
+    label = discord.ui.TextDisplay(
+        content="Create highly customized messages. \nThere are various embedded generators online to create those jsons",
+    )
+
+    message = discord.ui.TextInput(
+        label="Message",
+        style=discord.TextStyle.paragraph,
+        placeholder="Paste your json message here",
+        required=False,
+    )
+
+    file = discord.ui.Label(
+        text="File",
+        description="Upload your json file here. Only .txt and .json supported!",
+        component=discord.ui.FileUpload(required=False),
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        if self.message.value:
+            content: dict = json.loads(self.message.value)
+            if "content" not in content and "embeds" not in content:
+                # Assume user pasted an embed only
+                content = content = {
+                    "embeds": content,
+                }
+        else:
+            field: discord.ui.FileUpload = self.file.component
+            if len(field.values) == 0:
+                await interaction.response.send_message(f"Either text or file field needs to be filled!",
+                                                        ephemeral=True)
+                return
+            attachment = field.values[0]
+            if not attachment.filename.endswith((".txt", ".json")):
+                await interaction.response.send_message(f"Unsupported file. Only .json and .txt files are supported!",
+                                                        ephemeral=True)
+                return
+            content: dict = json.loads((await attachment.read()).decode("UTF-8"))
+            content = {
+                "content": content.get("content"),
+                "embeds": content.get("embeds"),
+            }
+        entry = CustomCommandsEntry(command=self.command, message=content)
+        try:
+            msg = self.cog.message_from_json(entry.message)
+        except Exception as e:
+            await interaction.response.send_message(f"Error creating custom command\n**{e}**", ephemeral=True)
+            return
+        self.cog.logger.info(f"{interaction.guild.name}: Created custom command {entry}")
+        await self.cog.data.upsert(interaction.guild.id, entry)
+        msg["content"] = f"> Setup custom command `{self.command}`\n=====\n{msg['content'] if msg['content'] else ''}"
+        await interaction.response.send_message(**msg, ephemeral=True)
 
 
 async def setup(bot: Bot) -> None:
