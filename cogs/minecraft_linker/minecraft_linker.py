@@ -75,6 +75,13 @@ class MinecraftLinker(commands.Cog):
     group = app_commands.Group(name="account_link_roles", description="Account Link Roles Config",
                                default_permissions=discord.Permissions(administrator=True))
 
+    def is_valid(self):
+        server = self.config["required_server"]
+        github_token = self.config["github_token"]
+        gist_id = self.config["gist_id"]
+        gist_file = self.config["gist_file"]
+        return server and github_token and gist_id and gist_file
+
     async def load_db(self) -> None:
         self.data = await self.bot.database.get_for(self, "mclink_accounts", LinkedUserData)
         self.role_config = await self.bot.database.get_for(self, "role_config", GuildRoleConfig)
@@ -286,4 +293,8 @@ class MinecraftLinker(commands.Cog):
 
 
 async def setup(bot: Bot) -> None:
-    await bot.add_cog(MinecraftLinker(bot))
+    cog = MinecraftLinker(bot)
+    if cog.is_valid():
+        await bot.add_cog(MinecraftLinker(bot))
+    else:
+        bot.logger.info(f"Minecraft linking module is not configured correctly. Disabling this cog!")
