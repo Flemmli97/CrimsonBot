@@ -1,10 +1,10 @@
 import asyncio
 import re
-from datetime import timedelta, timezone
-from typing import Callable
+from datetime import datetime, timedelta, timezone
+from typing import Callable, Optional
 
 import discord
-from discord import Optional, app_commands, datetime
+from discord import app_commands
 from discord.ext import commands
 
 from utils.bot import EMBED_COLOR, Bot

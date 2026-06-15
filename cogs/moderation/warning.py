@@ -1,10 +1,10 @@
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, Optional
 
 import discord
-from discord import AllowedMentions, Optional, app_commands
+from discord import AllowedMentions, app_commands
 from discord.ext import commands
 
 from utils.bot import EMBED_COLOR, Bot
