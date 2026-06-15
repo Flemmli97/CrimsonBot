@@ -51,10 +51,10 @@ paste:
   # $CONTENT: This is the files content
   # $FILE_NAME: The files name
   # $EXPIRATION: The expiration date for when the file should expire
-  paste_schema: 
-      text: "$CONTENT"
-      filename: "$FILE_NAME"
-      expires: "$EXPIRATION"
+  paste_schema:
+    text: "$CONTENT"
+    filename: "$FILE_NAME"
+    expires: "$EXPIRATION"
 
 wiki:
 

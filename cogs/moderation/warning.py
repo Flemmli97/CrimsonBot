@@ -38,6 +38,7 @@ class Warning(commands.Cog):
     """
     Implements a warning system. Since discord has nothing equal all commands require kick_members by default
     """
+
     def __init__(self, bot: Bot):
         self.bot = bot
         self.logger = self.bot.logger.getChild("Moderation")

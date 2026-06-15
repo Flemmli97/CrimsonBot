@@ -28,6 +28,7 @@ class PasteConfig(Schema):
                     """, keys=[])
         return schema
 
+
 def obj_replace(input, values):
     if isinstance(input, dict):
         return {k: obj_replace(v, values) for k, v in input.items()}
@@ -39,6 +40,8 @@ def obj_replace(input, values):
         return values[input[1:]]
 
     return input
+
+
 class FilePaste(commands.Cog):
 
     def __init__(self, bot: Bot):
@@ -85,7 +88,8 @@ class FilePaste(commands.Cog):
             await interaction.response.send_message("Current paste configs on this server", embed=embed,
                                                     allowed_mentions=False)
         else:
-            await interaction.response.send_message(f"No paste configs for this server configured. Configure some channels or categories to start listening!")
+            await interaction.response.send_message(
+                f"No paste configs for this server configured. Configure some channels or categories to start listening!")
 
     @chat_group.command(name="add", description="Add a chat to the whitelist")
     @app_commands.describe(
@@ -156,7 +160,8 @@ class FilePaste(commands.Cog):
         """
         Sends the content to a paste site. Adjust for paste site api
         """
-        data = obj_replace(self.paste_schema, {"CONTENT": content, "FILE_NAME": filename, "EXPIRATION": int(timedelta(days=30).total_seconds())})
+        data = obj_replace(self.paste_schema, {"CONTENT": content, "FILE_NAME": filename,
+                                               "EXPIRATION": int(timedelta(days=30).total_seconds())})
         # Send content to paste site
         send = requests.post(self.config["paste_site_api"], json=data)
         if send.ok:

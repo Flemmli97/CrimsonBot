@@ -56,7 +56,8 @@ class ModLog(commands.Cog):
                 description=img_desc,
                 timestamp=datetime.now(),
                 color=EMBED_COLOR
-            ).set_author(name=message.author.display_name, url=None, icon_url=message.author.display_avatar).set_image(url=f"attachment://{images[0].filename}")
+            ).set_author(name=message.author.display_name, url=None, icon_url=message.author.display_avatar).set_image(
+                url=f"attachment://{images[0].filename}")
             embeds.append(images_msg)
             files = [discord.File(
                 BytesIO(await images[0].read()),
@@ -78,7 +79,6 @@ class ModLog(commands.Cog):
             ).set_author(name=message.author.display_name, url=None, icon_url=message.author.display_avatar)
             embeds.append(attachments_msg)
         await self.bot.send_mod_log(message.guild, lambda ch: ch.send(embeds=embeds, files=files))
-
 
     @commands.Cog.listener()
     async def on_bulk_message_delete(self, messages: list[discord.Message]):
