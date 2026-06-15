@@ -165,7 +165,9 @@ class Honeypot(commands.Cog):
         config = await self.get_config(message.guild)
         if not config or not config.channel or message.channel.id != config.channel:
             return
-        if message.author.bot or message.author.guild_permissions.administrator:
+        if message.author.bot:
+            return
+        if message.author.guild_permissions and message.author.guild_permissions.administrator:
             return
         if message.author.id in config.ignored_users:
             return

@@ -238,7 +238,7 @@ class Automod(commands.Cog):
             return
         if message.author.bot:
             return
-        if message.author.guild_permissions.administrator:
+        if message.author.guild_permissions and message.author.guild_permissions.administrator:
             return
         config = await self.config.get(message.guild.id)
         if config:
