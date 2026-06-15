@@ -44,6 +44,18 @@ paste:
     - ".toml"
     - ".log"
 
+  # The json data schema for the paste sites used to upload the content to.
+  # For the default site of this config the schema is {"text": "$CONTENT", "filename": "$FILE_NAME", "expires": "$EXPIRATION"}
+  # Refer to the paste sites api for this
+  # Valid placeholders are:
+  # $CONTENT: This is the files content
+  # $FILE_NAME: The files name
+  # $EXPIRATION: The expiration date for when the file should expire
+  paste_schema: 
+      text: "$CONTENT"
+      filename: "$FILE_NAME"
+      expires: "$EXPIRATION"
+
 wiki:
 
   # URL of the wiki

@@ -28,13 +28,24 @@ class PasteConfig(Schema):
                     """, keys=[])
         return schema
 
+def obj_replace(input, values):
+    if isinstance(input, dict):
+        return {k: obj_replace(v, values) for k, v in input.items()}
 
+    if isinstance(input, list):
+        return [obj_replace(v, values) for v in input]
+
+    if isinstance(input, str) and input.startswith("$"):
+        return values[input[1:]]
+
+    return input
 class FilePaste(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
         self.logger = self.bot.logger.getChild("FilePaste")
-        self.config = self.bot.get_config_for("paste")
+        self.config: dict = self.bot.get_config_for("paste")
+        self.paste_schema = self.config["paste_schema"]
 
     group = app_commands.Group(name="paste", description="Manage paste Configs",
                                default_permissions=discord.Permissions(administrator=True))
@@ -74,13 +85,13 @@ class FilePaste(commands.Cog):
             await interaction.response.send_message("Current paste configs on this server", embed=embed,
                                                     allowed_mentions=False)
         else:
-            await interaction.response.send_message(f"No paste configs for this server configured. Using defaults")
+            await interaction.response.send_message(f"No paste configs for this server configured. Configure some channels or categories to start listening!")
 
     @chat_group.command(name="add", description="Add a chat to the whitelist")
     @app_commands.describe(
         channel="The chat to add",
     )
-    async def add_channel(self, interaction: discord.Interaction, channel: discord.abc.GuildChannel):
+    async def add_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
         self.logger.info(f"{interaction.guild.name}: Adding channel {channel.name} to paste whitelist")
         current = await self.get_config(interaction.guild)
         if current and channel.id not in current.channels:
@@ -95,7 +106,7 @@ class FilePaste(commands.Cog):
     @app_commands.describe(
         channel="The chat to remove",
     )
-    async def remove_channel(self, interaction: discord.Interaction, channel: discord.abc.GuildChannel):
+    async def remove_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
         self.logger.info(f"{interaction.guild.name}: Removing channel {channel.name} from paste whitelist")
         current = await self.get_config(interaction.guild)
         if current and channel.id in current.channels:
@@ -135,7 +146,7 @@ class FilePaste(commands.Cog):
                 res = await self.configs_db.clear_guild_data(interaction.guild.id)
             else:
                 res = await self.configs_db.upsert(interaction.guild.id, current)
-        msg = f"Added category {category.mention} to paste whitelist" if res else f"Could not add category {category.mention} to paste whitelist"
+        msg = f"Removed category {category.mention} from paste whitelist" if res else f"Could not remove category {category.mention} from paste whitelist"
         await interaction.response.send_message(msg, allowed_mentions=False)
 
     async def get_config(self, guild: discord.Guild):
@@ -145,7 +156,7 @@ class FilePaste(commands.Cog):
         """
         Sends the content to a paste site. Adjust for paste site api
         """
-        data = {"text": content, "filename": filename, "expires": int(timedelta(days=30).total_seconds())}
+        data = obj_replace(self.paste_schema, {"CONTENT": content, "FILE_NAME": filename, "EXPIRATION": int(timedelta(days=30).total_seconds())})
         # Send content to paste site
         send = requests.post(self.config["paste_site_api"], json=data)
         if send.ok:
@@ -162,11 +173,11 @@ class FilePaste(commands.Cog):
             return
         if len(message.attachments) > 0:
             config = await self.get_config(message.guild)
-            channels: list[str] = config.channels if config else []
-            if not len(channels) != 0 and not str(message.channel.id) not in channels:
+            channels: list[int] = config.channels if config else []
+            if len(channels) == 0 or message.channel.id not in channels:
                 return
-            channel_category: list[str] = config.channel_categories if config else []
-            if not len(channel_category) != 0 and str(message.channel.category.id) not in channel_category:
+            channel_category: list[int] = config.channel_categories if config else []
+            if len(channel_category) == 0 or message.channel.category.id not in channel_category:
                 return
             self.logger.info(
                 f"{message.guild.name}: Attempting to process message (at {message.created_at}) with attachments: {message.attachments}")
