@@ -1,4 +1,5 @@
 from datetime import datetime
+from io import BytesIO
 
 import discord
 from discord.ext import commands
@@ -35,10 +36,49 @@ class ModLog(commands.Cog):
         if message.author.bot:
             return
         desc = f"**Message by {message.author.mention} deleted in {message.channel.mention}**"
-        desc += f"\n{message.content}"
-        await self.bot.send_embed_mod_log(message.guild,
-                                          desc,
-                                          message.author)
+        embeds = []
+        if len(message.content) > 0:
+            main_msg = discord.Embed(
+                description=f"{desc}\n{message.content}",
+                timestamp=datetime.now(),
+                color=EMBED_COLOR
+            ).set_author(name=message.author.display_name, url=None, icon_url=message.author.display_avatar)
+            embeds.append(main_msg)
+        images = [att for att in message.attachments if att.content_type and att.content_type.startswith("image/")]
+        files = []
+        img_num = len(images)
+        if img_num > 0:
+            if len(embeds) == 0:
+                img_desc = desc.replace("Message", f"Images" if img_num > 1 else f"Image")
+            else:
+                img_desc = f"**{img_num} images deleted**" if img_num > 1 else f"**Image deleted**"
+            images_msg = discord.Embed(
+                description=img_desc,
+                timestamp=datetime.now(),
+                color=EMBED_COLOR
+            ).set_author(name=message.author.display_name, url=None, icon_url=message.author.display_avatar).set_image(url=f"attachment://{images[0].filename}")
+            embeds.append(images_msg)
+            files = [discord.File(
+                BytesIO(await images[0].read()),
+                filename=images[0].filename
+            )]
+        others = [att for att in message.attachments if att not in images]
+        att_num = len(others)
+        if att_num > 0:
+            if len(embeds) == 0:
+                att_desc = desc.replace("Message", f"Attachments" if att_num > 1 else f"Attachment")
+            else:
+                att_desc = f"**{img_num} attachments deleted**" if att_num > 1 else f"**Attachment deleted**"
+            att_desc += "\n "
+            att_desc += "\n".join([f'`{att.filename}`' for att in others])
+            attachments_msg = discord.Embed(
+                description=att_desc,
+                timestamp=datetime.now(),
+                color=EMBED_COLOR
+            ).set_author(name=message.author.display_name, url=None, icon_url=message.author.display_avatar)
+            embeds.append(attachments_msg)
+        await self.bot.send_mod_log(message.guild, lambda ch: ch.send(embeds=embeds, files=files))
+
 
     @commands.Cog.listener()
     async def on_bulk_message_delete(self, messages: list[discord.Message]):
