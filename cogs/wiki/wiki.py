@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 import discord
 import requests
 import typesense
+import typesense.configuration
 import typesense.types.document as tst
 from bs4 import BeautifulSoup, Tag
 from discord import app_commands, Interaction
@@ -290,4 +291,7 @@ class Wiki(commands.Cog):
 
 
 async def setup(bot: Bot) -> None:
-    await bot.add_cog(Wiki(bot))
+    try:
+        await bot.add_cog(Wiki(bot))
+    except typesense.configuration.ConfigError as e:
+        bot.logger.info(f"Invalid wiki config. Cog will not be loaded. {e}")
