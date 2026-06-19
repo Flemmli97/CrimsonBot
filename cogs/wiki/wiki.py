@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import typing
 from typing import Optional
 from urllib.parse import urlparse
@@ -12,11 +13,26 @@ from discord.ext import commands
 from typesense.configuration import NodeConfigDict
 
 from utils.bot import EMBED_COLOR, Bot
+from utils.database import CogDatabase
+from utils.sqlutils import SQLSchema, Schema
 
 
 class ProjectData(typing.TypedDict):
     label: str
     versions: list[str]
+
+@dataclass
+class WikiDefaultScopes(Schema):
+    channel: int
+    mod: str
+
+    @classmethod
+    def to_sql_schema(cls) -> SQLSchema:
+        schema: SQLSchema = SQLSchema(schema="""
+                        channel int(25),
+                        command varchar(20),
+                    """, keys=['channel'])
+        return schema
 
 
 class Wiki(commands.Cog):
@@ -39,7 +55,11 @@ class Wiki(commands.Cog):
             "connection_timeout_seconds": 2,
         })
         self.collection = search_config["collection"]
+        self.wikiScopes: CogDatabase[WikiDefaultScopes] | None = None
 
+    scopes = app_commands.Group(name="wikiscopes", description="Manage default mods for wiki searches",
+                               default_permissions=discord.Permissions(administrator=True))
+    
     async def fetch_projects(self):
         search_params: tst.SearchParameters = {
             "q": "*",
@@ -76,6 +96,9 @@ class Wiki(commands.Cog):
         defaults += [mod for mod in mods if "current" in mod]
         return [labelled, str(defaults).replace("'", "")]
 
+    async def load_db(self) -> None:
+        self.wikiScopes = await self.bot.database.get_for(self, "channel_scopes", WikiDefaultScopes)
+
     async def cog_load(self):
         projects = await self.fetch_projects()
         self.project_data = projects[0]
@@ -83,6 +106,50 @@ class Wiki(commands.Cog):
         # Add computed choices to the command
         mod_choices = [app_commands.Choice(name=data["label"], value=id) for [id, data] in self.project_data.items()]
         app_commands.choices(mod=mod_choices)(self.wiki)
+        app_commands.choices(mod=mod_choices)(self.scopesSet)
+        await self.load_db()
+
+
+    @scopes.command(name="set", description="Set the default mod to search for in a channel")
+    @app_commands.describe(
+        channel="The channel",
+        mod="The mod to search for",
+    )
+    async def scopesSet(self, interaction: Interaction, channel: discord.TextChannel, mod: str):
+        self.logger.info(f"{interaction.guild.name}: Setting default mod for wiki searches in {channel.name} to {mod}")
+        current = await self.wikiScopes.get(interaction.guild, channel=channel.id)
+        if current:
+            current.mod = mod
+        else:
+            current = WikiDefaultScopes(channel.id, mod)
+        await self.wikiScopes.upsert(interaction.guild.id, current)
+        await interaction.response.send_message(f"Set default mod for wiki searches in {channel.name} to {mod}", ephemeral=True)
+
+    @scopes.command(name="remove", description="Remove the default mod for a channel")
+    @app_commands.describe(
+        channel="The channel",
+    )
+    async def scopesRemove(self, interaction: Interaction, channel: discord.TextChannel):
+        self.logger.info(f"{interaction.guild.name}: Removing default mod for wiki searches in {channel.name}")
+        res = await self.wikiScopes.remove(interaction.guild, channel=channel.id)
+        await interaction.response.send_message(f"Removed default mod for wiki searches in {channel.name}" if res else f"Could not remove anything. Probably nothing was configured.", ephemeral=True)
+
+    @scopes.command(name="get", description="Get current server configs")
+    async def scopesGet(self, interaction: Interaction):
+        self.logger.info(f"{interaction.guild.name}: Getting default mod configs for wiki searches")
+        scopes = await self.wikiScopes.get_all(interaction.guild.id)
+        if len(scopes) == 0:
+            await interaction.response.send_message(f"No default mods set for searches.")
+            return
+        desc = ""
+        for scope in scopes:
+            desc += f"<#{scope.channel}> - `{scope.mod}`\n"
+        embed = discord.Embed(
+            title=f"Default mod to search in channels",
+            description=desc,
+            color=EMBED_COLOR
+        )
+        await interaction.response.send_message(embed=embed)
 
     @app_commands.command(description="Search something on the wiki")
     @app_commands.describe(
@@ -95,6 +162,9 @@ class Wiki(commands.Cog):
         Searches the wiki with the given query
         If top level already returns result we only return them. Otherwise try for next level anchors before searching all contents
         """
+        current = await self.wikiScopes.get(interaction.guild, channel=interaction.channel.id)
+        if not mod and current:
+            mod = current.mod
         tag = self.parse_mod_data(mod)
         await interaction.response.defer()
         first = await self.run_search(query=query, tag=tag, type="lvl1")
