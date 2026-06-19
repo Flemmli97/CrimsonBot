@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Callable, Awaitable, Any
@@ -225,6 +226,8 @@ class Honeypot(commands.Cog):
                 return
         self.logger.info(f"HONEYPOT - {message.author.name} in {message.guild.name}: {message.content}")
         mod: Moderation = self.bot.get_cog("Moderation")
+        # Sleep before banning so message can be logged
+        await asyncio.sleep(2)
         await mod.temp_ban(message.guild, message.author,
                            datetime.now(timezone.utc) + timedelta(minutes=config.ban_duration()),
                            reason="Talking in the honeypot", delete_seconds=60 * 15)
