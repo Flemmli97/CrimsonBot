@@ -124,7 +124,7 @@ class Wiki(commands.Cog):
         else:
             current = WikiDefaultScopes(channel.id, mod)
         await self.wikiScopes.upsert(interaction.guild.id, current)
-        await interaction.response.send_message(f"Set default mod for wiki searches in {channel.name} to {mod}",
+        await interaction.response.send_message(f"Set default mod for wiki searches in {channel.mention} to `{mod}`",
                                                 ephemeral=True)
 
     @scopes.command(name="remove", description="Remove the default mod for a channel")
@@ -135,7 +135,7 @@ class Wiki(commands.Cog):
         self.logger.info(f"{interaction.guild.name}: Removing default mod for wiki searches in {channel.name}")
         res = await self.wikiScopes.remove(interaction.guild.id, channel=channel.id)
         await interaction.response.send_message(
-            f"Removed default mod for wiki searches in {channel.name}" if res else f"Could not remove anything. Probably nothing was configured.",
+            f"Removed default mod for wiki searches in {channel.mention}" if res else f"Could not remove anything. Probably nothing was configured.",
             ephemeral=True)
 
     @scopes.command(name="get", description="Get current server configs")
@@ -166,7 +166,7 @@ class Wiki(commands.Cog):
         Searches the wiki with the given query
         If top level already returns result we only return them. Otherwise try for next level anchors before searching all contents
         """
-        current = await self.wikiScopes.get(interaction.guild, channel=interaction.channel.id)
+        current = await self.wikiScopes.get(interaction.guild.id, channel=interaction.channel.id)
         if not mod and current:
             mod = current.mod
         tag = self.parse_mod_data(mod)
