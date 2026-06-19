@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import typing
+from dataclasses import dataclass
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -21,6 +21,7 @@ from utils.sqlutils import SQLSchema, Schema
 class ProjectData(typing.TypedDict):
     label: str
     versions: list[str]
+
 
 @dataclass
 class WikiDefaultScopes(Schema):
@@ -59,8 +60,8 @@ class Wiki(commands.Cog):
         self.wikiScopes: CogDatabase[WikiDefaultScopes] | None = None
 
     scopes = app_commands.Group(name="wikiscopes", description="Manage default mods for wiki searches",
-                               default_permissions=discord.Permissions(administrator=True))
-    
+                                default_permissions=discord.Permissions(administrator=True))
+
     async def fetch_projects(self):
         search_params: tst.SearchParameters = {
             "q": "*",
@@ -110,7 +111,6 @@ class Wiki(commands.Cog):
         app_commands.choices(mod=mod_choices)(self.scopesSet)
         await self.load_db()
 
-
     @scopes.command(name="set", description="Set the default mod to search for in a channel")
     @app_commands.describe(
         channel="The channel",
@@ -118,13 +118,14 @@ class Wiki(commands.Cog):
     )
     async def scopesSet(self, interaction: Interaction, channel: discord.TextChannel, mod: str):
         self.logger.info(f"{interaction.guild.name}: Setting default mod for wiki searches in {channel.name} to {mod}")
-        current = await self.wikiScopes.get(interaction.guild, channel=channel.id)
+        current = await self.wikiScopes.get(interaction.guild.id, channel=channel.id)
         if current:
             current.mod = mod
         else:
             current = WikiDefaultScopes(channel.id, mod)
         await self.wikiScopes.upsert(interaction.guild.id, current)
-        await interaction.response.send_message(f"Set default mod for wiki searches in {channel.name} to {mod}", ephemeral=True)
+        await interaction.response.send_message(f"Set default mod for wiki searches in {channel.name} to {mod}",
+                                                ephemeral=True)
 
     @scopes.command(name="remove", description="Remove the default mod for a channel")
     @app_commands.describe(
@@ -132,8 +133,10 @@ class Wiki(commands.Cog):
     )
     async def scopesRemove(self, interaction: Interaction, channel: discord.TextChannel):
         self.logger.info(f"{interaction.guild.name}: Removing default mod for wiki searches in {channel.name}")
-        res = await self.wikiScopes.remove(interaction.guild, channel=channel.id)
-        await interaction.response.send_message(f"Removed default mod for wiki searches in {channel.name}" if res else f"Could not remove anything. Probably nothing was configured.", ephemeral=True)
+        res = await self.wikiScopes.remove(interaction.guild.id, channel=channel.id)
+        await interaction.response.send_message(
+            f"Removed default mod for wiki searches in {channel.name}" if res else f"Could not remove anything. Probably nothing was configured.",
+            ephemeral=True)
 
     @scopes.command(name="get", description="Get current server configs")
     async def scopesGet(self, interaction: Interaction):
