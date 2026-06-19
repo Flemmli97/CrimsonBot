@@ -32,7 +32,7 @@ class WikiDefaultScopes(Schema):
     def to_sql_schema(cls) -> SQLSchema:
         schema: SQLSchema = SQLSchema(schema="""
                         channel int(25),
-                        command varchar(20),
+                        mod varchar(20),
                     """, keys=['channel'])
         return schema
 
