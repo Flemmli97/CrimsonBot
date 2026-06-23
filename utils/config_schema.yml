@@ -32,10 +32,10 @@ minecraft_linker:
 paste:
 
   # URL for the paste api
-  paste_site_api: "https://blazing-coop.net/paste"
+  paste_site_api: ""
 
   # URL for the main paste site. This will be used to build the file link
-  paste_site: "https://blazing-coop.net"
+  paste_site: ""
 
   # File extension that will be handled and uploaded
   allowed_files:
