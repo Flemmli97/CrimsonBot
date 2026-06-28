@@ -52,17 +52,27 @@ class ModLog(commands.Cog):
                 img_desc = desc.replace("Message", f"Images" if img_num > 1 else f"Image")
             else:
                 img_desc = f"**{img_num} images deleted**" if img_num > 1 else f"**Image deleted**"
-            images_msg = discord.Embed(
-                description=img_desc,
-                timestamp=datetime.now(),
-                color=EMBED_COLOR
-            ).set_author(name=message.author.display_name, url=None, icon_url=message.author.display_avatar).set_image(
-                url=f"attachment://{images[0].filename}")
-            embeds.append(images_msg)
-            files = [discord.File(
-                BytesIO(await images[0].read()),
-                filename=images[0].filename
-            )]
+            try:
+                files = [discord.File(
+                    BytesIO(await images[0].read(use_cached=True)),
+                    filename=images[0].filename
+                )]
+                images_msg = discord.Embed(
+                    description=img_desc,
+                    timestamp=datetime.now(),
+                    color=EMBED_COLOR
+                ).set_author(name=message.author.display_name, url=None,
+                             icon_url=message.author.display_avatar).set_image(
+                    url=f"attachment://{images[0].filename}")
+                embeds.append(images_msg)
+            except discord.NotFound:
+                img_desc += "\nUnable to cache sent image"
+                images_msg = discord.Embed(
+                    description=img_desc,
+                    timestamp=datetime.now(),
+                    color=EMBED_COLOR
+                ).set_author(name=message.author.display_name, url=None, icon_url=message.author.display_avatar)
+                embeds.append(images_msg)
         others = [att for att in message.attachments if att not in images]
         att_num = len(others)
         if att_num > 0:
