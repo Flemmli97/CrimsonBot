@@ -14,7 +14,7 @@ SnowflakeTime = discord.abc.Snowflake | datetime
 URL_REGEX = re.compile(r"https://\S+")
 
 
-async def _purge(
+async def purge(
         channel: discord.TextChannel | discord.channel.VocalGuildChannel | discord.Thread,
         amount: Optional[int] = 100,
         check: Callable[[discord.Message], bool] = None,
@@ -111,8 +111,8 @@ class PurgeCommand(commands.Cog):
             oldest_first: Optional[bool] = None,
     ):
         await interaction.response.defer()
-        msg = await _purge(interaction.channel, amount, check, after, oldest_first,
-                           exclude=(await interaction.original_response()).id)
+        msg = await purge(interaction.channel, amount, check, after, oldest_first,
+                          exclude=(await interaction.original_response()).id)
         msgs = len(msg)
         embed = discord.Embed(description=f"Purged {msgs} messages" if msgs != 1 else "Purged 1 message",
                               color=EMBED_COLOR)

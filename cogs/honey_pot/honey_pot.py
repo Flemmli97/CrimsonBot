@@ -8,6 +8,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from cogs.moderation import purge
 from cogs.moderation.moderation import Moderation
 from utils.bot import EMBED_COLOR, Bot
 from utils.database import CogDatabase
@@ -228,7 +229,16 @@ class Honeypot(commands.Cog):
         self.logger.info(f"HONEYPOT - {message.author.name} in {message.guild.name}: {message.content}")
         mod: Moderation = self.bot.get_cog("Moderation")
         # Sleep before banning so message can be logged
-        await asyncio.sleep(3)
+        await asyncio.sleep(random.randint(5, 10))
+        # Manually purge messages cause discords ban purge is unreliable
+        past_msg_date = datetime.now(timezone.utc) - timedelta(minutes=15)
+        for channel in message.guild.channels:
+            if (isinstance(channel, discord.TextChannel)
+                    or isinstance(channel, discord.channel.VocalGuildChannel)
+                    or isinstance(channel, discord.Thread)):
+                await purge.purge(channel=channel.id, check=lambda m: m.author.id == message.author.id,
+                                  after=past_msg_date)
+        await asyncio.sleep(5)
         await mod.temp_ban(message.guild, message.author,
                            datetime.now(timezone.utc) + timedelta(minutes=config.ban_duration()),
                            reason="Talking in the honeypot", delete_seconds=60 * 15)
