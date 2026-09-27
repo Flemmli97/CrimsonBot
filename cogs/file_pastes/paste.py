@@ -179,10 +179,10 @@ class FilePaste(commands.Cog):
         if len(message.attachments) > 0:
             config = await self.get_config(message.guild)
             channels: list[int] = config.channels if config else []
-            if len(channels) == 0 or message.channel.id not in channels:
-                return
+            match_channel = len(channels) != 0 and message.channel.id in channels
             channel_category: list[int] = config.channel_categories if config else []
-            if len(channel_category) == 0 or message.channel.category.id not in channel_category:
+            match_category = len(channel_category) != 0 and message.channel.category.id in channel_category
+            if not match_channel and not match_category:
                 return
             self.logger.info(
                 f"{message.guild.name}: Attempting to process message (at {message.created_at}) with attachments: {message.attachments}")
