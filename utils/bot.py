@@ -67,9 +67,9 @@ class Bot(commands.Bot):
             for file_name in files:
                 if file_name.endswith(".py"):
                     extension = f"{path.replace('./cogs', 'cogs').replace('/', '.')}.{file_name[:-3]}"
-                    self.logger.info("Loading extension: %s", extension)
                     try:
                         await self.load_extension(extension)
+                        self.logger.info("Extension %s loaded", extension)
                     except errors.NoEntryPointError:
                         pass
 

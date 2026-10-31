@@ -1,5 +1,6 @@
 .env
 data
+.venv
 
 # python
 __pycache__

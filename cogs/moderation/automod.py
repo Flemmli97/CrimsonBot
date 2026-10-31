@@ -260,7 +260,7 @@ class Automod(commands.Cog):
                 offence = len(tracker[message.author.id])
                 embed = None
                 if offence >= rule.setting["mute_threshold"]:
-                    await message.author.timeout(until=timedelta(minutes=rule.setting["mute_duration"]),
+                    await message.author.timeout(timedelta(minutes=rule.setting["mute_duration"]),
                                                  reason=f"Automod {rule.name}: Message contained banned words/phrases")
                     embed = discord.Embed(
                         description=f"You have been timed out in {message.guild.name} | Automod `{rule.name}`!",

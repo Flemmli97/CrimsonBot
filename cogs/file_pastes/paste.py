@@ -181,7 +181,7 @@ class FilePaste(commands.Cog):
             channels: list[int] = config.channels if config else []
             match_channel = len(channels) != 0 and message.channel.id in channels
             channel_category: list[int] = config.channel_categories if config else []
-            match_category = len(channel_category) != 0 and message.channel.category.id in channel_category
+            match_category = len(channel_category) != 0 and message.channel.category and message.channel.category.id in channel_category
             if not match_channel and not match_category:
                 return
             self.logger.info(

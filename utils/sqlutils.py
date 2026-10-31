@@ -2,7 +2,6 @@ import json
 from dataclasses import dataclass
 from typing import Awaitable, Protocol, TypeVar, Generic, Callable, Any, Type, Union, get_args, get_origin
 
-from aiosqlite import Cursor
 from discord.ext import commands
 
 T = TypeVar("T")
