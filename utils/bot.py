@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass
 from datetime import datetime
 from logging import Logger
+from pathlib import Path
 from typing import Optional, Callable, Awaitable
 
 import aiosqlite
@@ -32,7 +33,7 @@ class BotConfig(Schema):
 
 
 class Bot(commands.Bot):
-    def __init__(self, *, intents: Intents, config: dict, logger: Logger, data_directory: str):
+    def __init__(self, *, intents: Intents, config: dict, logger: Logger, data_directory: Path):
         super().__init__(intents=intents, command_prefix=config.get("prefix", "!"), max_messages=3000)
         self.directory = os.path
         self.logger = logger

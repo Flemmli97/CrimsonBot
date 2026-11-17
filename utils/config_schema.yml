@@ -70,3 +70,14 @@ wiki:
     protocol: ""
     path: ""
     collection: ""
+
+alerts:
+
+  # The twitch client id for the twitch api
+  twitch_client_id:
+
+  # The twitch client secret for the twitch api
+  twitch_client_secret:
+
+  # The youtube api key for the youtube api
+  youtube_api_key: 

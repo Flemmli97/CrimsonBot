@@ -89,59 +89,62 @@ def collect_keys(source, path: str, keys: set[str]):
     return keys
 
 
-yaml = YAML()
-yaml.preserve_quotes = True
+if __name__ == "__main__":
+    yaml = YAML()
+    yaml.preserve_quotes = True
 
-exists = os.path.exists(CONFIG_FILE)
-if not exists:
-    shutil.copyfile(CONFIG_SCHEMA, CONFIG_FILE)
-with open(CONFIG_FILE, "r") as f:
-    config: CommentedMap = yaml.load(f)
+    exists = os.path.exists(CONFIG_FILE)
+    if not exists:
+        shutil.copyfile(CONFIG_SCHEMA, CONFIG_FILE)
+    with open(CONFIG_FILE, "r") as f:
+        config: CommentedMap = yaml.load(f)
 
-# Setup Loggers
-logger = logging.getLogger(config.get("name", "Bot"))
-logger.setLevel("INFO")
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(LogFormatting())
-logger.addHandler(console_handler)
+    # Setup Loggers
+    logger = logging.getLogger(config.get("name", "Bot"))
+    logger.setLevel("INFO")
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(LogFormatting())
+    logger.addHandler(console_handler)
 
-file_handler = logging.handlers.TimedRotatingFileHandler(filename=f"{LOGGER_DIR}/bot.log", encoding="utf-8", when="D")
-file_handler_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s - %(message)s", "%Y-%m-%d %H:%M:%S")
-file_handler.setFormatter(file_handler_formatter)
-logger.addHandler(file_handler)
+    file_handler = logging.handlers.TimedRotatingFileHandler(filename=f"{LOGGER_DIR}/bot.log", encoding="utf-8",
+                                                             when="D")
+    file_handler_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+                                               "%Y-%m-%d %H:%M:%S")
+    file_handler.setFormatter(file_handler_formatter)
+    logger.addHandler(file_handler)
 
-if exists:
-    with open(CONFIG_SCHEMA, "r") as f:
-        schema: CommentedMap = yaml.load(f)
-        currentKeys = collect_keys(config, "", set())
-        schemaKeys = collect_keys(schema, "", set())
-        # Config keys mismatch. Try merging
-        if len(schemaKeys.difference(currentKeys)) > 0:
-            from_schema(schema, config)
-            logger.name = schema.get("name", logger.name)
-            logger.info("Mismatching config. Updating")
-            back = 0
-            while os.path.exists(f"{CONFIG_FILE}.back{back if back > 0 else ''}"):
-                back += 1
-            with open(f"{CONFIG_FILE}.back{back if back > 0 else ''}", "w") as cf:
-                yaml.dump(config, cf)
-            with open(CONFIG_FILE, "w") as cf:
-                yaml.dump(schema, cf)
-            config = schema
-else:
-    logger.error(f"A new config has been created at {CONFIG_FILE}!")
-    sys.exit(1)
+    if exists:
+        with open(CONFIG_SCHEMA, "r") as f:
+            schema: CommentedMap = yaml.load(f)
+            currentKeys = collect_keys(config, "", set())
+            schemaKeys = collect_keys(schema, "", set())
+            # Config keys mismatch. Try merging
+            if len(schemaKeys.difference(currentKeys)) > 0:
+                from_schema(schema, config)
+                logger.name = schema.get("name", logger.name)
+                logger.info("Mismatching config. Updating")
+                back = 0
+                while os.path.exists(f"{CONFIG_FILE}.back{back if back > 0 else ''}"):
+                    back += 1
+                with open(f"{CONFIG_FILE}.back{back if back > 0 else ''}", "w") as cf:
+                    yaml.dump(config, cf)
+                with open(CONFIG_FILE, "w") as cf:
+                    yaml.dump(schema, cf)
+                config = schema
+    else:
+        logger.error(f"A new config has been created at {CONFIG_FILE}!")
+        sys.exit(1)
 
-logger.setLevel(config.get("logging_level", "INFO"))
-logger.info(f"Config file path: {CONFIG_FILE}")
+    logger.setLevel(config.get("logging_level", "INFO"))
+    logger.info(f"Config file path: {CONFIG_FILE}")
 
-if not config["bot_token"]:
-    logger.error(f"No Bot Token defined!")
-    sys.exit(1)
+    if not config["bot_token"]:
+        logger.error(f"No Bot Token defined!")
+        sys.exit(1)
 
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-bot = Bot(intents=intents, config=config, logger=logger, data_directory=DATA_DIR)
-logger.info(f"===== Starting bot {bot.config['name']} =====")
-bot.run(bot.config["bot_token"])
+    intents = discord.Intents.default()
+    intents.message_content = True
+    intents.members = True
+    bot = Bot(intents=intents, config=config, logger=logger, data_directory=DATA_DIR)
+    logger.info(f"===== Starting bot {bot.config['name']} =====")
+    bot.run(bot.config["bot_token"])
