@@ -9,6 +9,7 @@ from discord.ext import commands
 
 from utils.bot import EMBED_COLOR, Bot
 from utils.database import CogDatabase
+from utils.paginated_view import PaginationView
 from utils.sqlutils import Schema, SQLSchema
 
 
@@ -137,17 +138,20 @@ class CustomCommands(commands.Cog):
             )
             await interaction.response.send_message(embed=embed)
             return
-        paginated = current[page:page + 10]
         prefix = await self.get_command_prefix(interaction.guild)
-        desc = ""
-        for entry in paginated:
-            desc += f"> {prefix}{entry.command}\n"
-        embed = discord.Embed(
-            title=f"Custom command list:",
-            description=desc,
-            color=EMBED_COLOR
-        )
-        await interaction.response.send_message(embed=embed)
+
+        async def generator(paginated):
+            desc = ""
+            for entry in paginated:
+                desc += f"> {prefix}{entry.command}\n"
+            return discord.Embed(
+                title=f"Custom command list:",
+                description=desc,
+                color=EMBED_COLOR
+            )
+
+        view = PaginationView(sender=interaction.user.id, entries=current, generator=generator, amount=10)
+        await interaction.response.send_message(embed=await view.get_embed(), view=view)
 
     @remove_custom_command.autocomplete("command")
     @get_custom_command.autocomplete("command")

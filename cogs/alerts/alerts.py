@@ -14,6 +14,7 @@ from cogs.alerts.utils import MediaInfo, ServerAlertSettings
 from cogs.alerts.youtube import YoutubeListener, YOUTUBE_BASE_URL
 from utils.bot import EMBED_COLOR, Bot
 from utils.database import CogDatabase
+from utils.paginated_view import PaginationView
 
 TWITCH_ICON = "https://raw.githubusercontent.com/Flemmli97/CrimsonBot/refs/heads/main/assets/icons/twitch.png"
 YOUTUBE_ICON = "https://raw.githubusercontent.com/Flemmli97/CrimsonBot/refs/heads/main/assets/icons/youtube.png"
@@ -98,16 +99,20 @@ class StreamAlerts(commands.Cog):
             )
             await interaction.response.send_message(embed=embed)
             return
-        paginated = current[page:page + 10]
-        desc = ""
-        for entry in paginated:
-            desc += f"> {await entry.display(self.twitch_listener.get_user_profile_else, self.youtube_listener.get_user_profile_else, self.bot)}\n"
-        embed = discord.Embed(
-            title=f"Alert list:",
-            description=desc,
-            color=EMBED_COLOR
-        )
-        await interaction.response.send_message(embed=embed, allowed_mentions=AllowedMentions.none())
+
+        async def generator(paginated: list[ServerAlertSettings]):
+            desc = ""
+            for entry in paginated:
+                desc += f"> {await entry.display(self.twitch_listener.get_user_profile_else, self.youtube_listener.get_user_profile_else, self.bot)}\n"
+            return discord.Embed(
+                title=f"Alert list:",
+                description=desc,
+                color=EMBED_COLOR
+            )
+
+        view = PaginationView(sender=interaction.user.id, entries=current, generator=generator, amount=10)
+        await interaction.response.send_message(embed=await view.get_embed(), view=view,
+                                                allowed_mentions=AllowedMentions.none())
 
     @group.command(name="unsubscribe", description="Stop listening to the given channel")
     @app_commands.describe(
