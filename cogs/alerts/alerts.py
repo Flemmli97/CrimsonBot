@@ -299,7 +299,7 @@ class AlertsModal(discord.ui.Modal):
         text="The alert channel post in",
         component=discord.ui.ChannelSelect(
             placeholder="Which channel to post in",
-            channel_types=[ChannelType.text],
+            channel_types=[ChannelType.text, ChannelType.news],
             required=True
         )
     )
