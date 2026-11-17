@@ -15,8 +15,8 @@ from cogs.alerts.youtube import YoutubeListener, YOUTUBE_BASE_URL
 from utils.bot import EMBED_COLOR, Bot
 from utils.database import CogDatabase
 
-TWITCH_ICON = "https://raw.githubusercontent.com/Flemmli97/CrimsonBot/refs/heads/main/assets/icons/twitch.py"
-YOUTUBE_ICON = "https://raw.githubusercontent.com/Flemmli97/CrimsonBot/refs/heads/main/assets/icons/youtube.py"
+TWITCH_ICON = "https://raw.githubusercontent.com/Flemmli97/CrimsonBot/refs/heads/main/assets/icons/twitch.png"
+YOUTUBE_ICON = "https://raw.githubusercontent.com/Flemmli97/CrimsonBot/refs/heads/main/assets/icons/youtube.png"
 
 
 class PendingStreams:
