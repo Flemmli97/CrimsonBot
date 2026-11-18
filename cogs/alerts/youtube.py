@@ -82,7 +82,7 @@ class YoutubeVideoCache(Schema):
                     """, keys=["id"])
         return schema
 
-    def to_info(self, video_type: VideoTypes) -> MediaInfo:
+    def to_info(self) -> MediaInfo:
         return MediaInfo(
             source="youtube",
             user=self.user,
@@ -92,7 +92,7 @@ class YoutubeVideoCache(Schema):
             url=f"https://www.youtube.com/watch?v={self.id}",
             thumbnail=f"https://img.youtube.com/vi/{self.id}/maxresdefault.jpg",
             game="",
-            video_type=video_type
+            video_type=self.video_type
         )
 
 
@@ -144,39 +144,73 @@ class YoutubeListener:
     async def fetch_videos(self) -> dict[int, dict[str, list[MediaInfo]]]:
         if not self.listeners:
             return {}
-        videos: list[tuple[int, str, MediaInfo]] = []
+        videos: list[YoutubeVideoCache] = []
 
         seen = defaultdict(set)
         all_videos = await self.video_cache.get_all()
         for v in all_videos:
             seen[v.channel_id].add(v.id)
-
+        # Fetch all videos from feed async first
+        # Does not use api
         await asyncio.gather(*[
             self._process_channel(channel=channel, collector=videos, seen=seen[channel])
             for channel in self.listeners.keys()
         ])
-        guilds_to_alert: dict[int, dict[str, list[MediaInfo]]] = defaultdict(lambda: defaultdict(list))
-        for guild, name, video in videos:
-            guilds_to_alert[guild][name].append(video)
         streams = [video for video in all_videos if (
                 video.video_type == "upcoming" or video.video_type == "live") and video.channel_id in self.listeners]
-        statuses = await self._check_video_status([stream.id for stream in streams])
+        # Now fetch the status together
+        # This reduces api calls
+        video_ids = list(set([video.id for video in videos] + [stream.id for stream in streams]))
+        statuses = await self._check_video_status(video_ids)
+        # Schedule alert for matching videos
+        guilds_to_alert: dict[int, dict[str, list[MediaInfo]]] = defaultdict(lambda: defaultdict(list))
+        db_entries: list[YoutubeVideoCache] = []
+        for video in videos:
+            status = statuses.get(video.id)
+            if not status:
+                continue
+            video.video_type = status
+            db_entries.append(video)
+            guilds = self.listeners.get(video.channel_id, [])
+            if len(seen[video.channel_id]) > 0 and status != "upcoming":
+                for listener in guilds:
+                    if status not in listener.video_types:
+                        continue
+                    guilds_to_alert[listener.guild_id][listener.name].append(video.to_info())
         now = dt.now(datetime.UTC)
         for stream in streams:
             # Check upcoming live streams
-            status = statuses[stream.id]
+            status = statuses.get(stream.id)
             if status and status != stream.video_type:
                 stream.video_type = status
                 stream.first_seen = now
-                await self.video_cache.upsert(stream)
+                db_entries.append(stream)
                 # Went live
                 if status == "live":
                     for listener in self.listeners[stream.channel_id]:
                         if status not in listener.video_types:
                             continue
-                        guilds_to_alert[listener.guild_id][listener.name].append(stream.to_info(status))
+                        guilds_to_alert[listener.guild_id][listener.name].append(stream.to_info())
+        await self.insert_video_data(db_entries)
         await self.prune_old_videos_cache()
         return guilds_to_alert
+
+    async def insert_video_data(self, entries: list[YoutubeVideoCache]):
+        if len(entries) > 0:
+            async def insert_videos(table: str, cursor: Cursor):
+                encoded = [encode_sql_obj(obj) for obj in entries]
+                query = list(encoded[0].keys())
+                params = [
+                    tuple(obj[key] for key in query)
+                    for obj in encoded
+                ]
+                await cursor.executemany(
+                    f"INSERT OR IGNORE INTO {table} ({', '.join(query)}) values ({', '.join(['?' for _ in query])})",
+                    params
+                )
+                return True
+
+            await self.video_cache.execute(insert_videos)
 
     async def prune_old_videos_cache(self):
         async def prune_old_videos(table: str, cursor: Cursor):
@@ -200,45 +234,19 @@ class YoutubeListener:
 
         await self.video_cache.execute(prune_old_videos)
 
-    async def _process_channel(self, channel: str, collector: list[tuple[int, str, MediaInfo]], seen: set[str]):
+    async def _process_channel(self, channel: str, collector: list[YoutubeVideoCache], seen: set[str]):
         async with self.session.get(YOUTUBE_CHANNEL_RSS + channel) as response:
             if response.status == 200:
                 feeds = _fetch_feed_videos(await response.text(), seen)
-                videos: list[YoutubeVideoCache] = []
-                statuses = await self._check_video_status([feed["id"] for feed in feeds])
                 for feed in reversed(feeds):
-                    guilds = self.listeners.get(channel, [])
-                    status = statuses[feed["id"]]
-                    if not status:
-                        continue
                     video: YoutubeMediaInfo = {
                         "source": "youtube",
                         "user": channel,
                         "channel_url": self.profiles[channel]["url"],
-                        "video_type": status,
+                        "video_type": None,
                         **feed
                     }
-                    videos.append(YoutubeVideoCache.of(info=video, channel=channel, first_seen=video["published"]))
-                    if len(seen) > 0 and status != "upcoming":
-                        for listener in guilds:
-                            if status not in listener.video_types:
-                                continue
-                            collector.append((listener.guild_id, listener.name, video))
-                if len(videos) > 0:
-                    async def insert_videos(table: str, cursor: Cursor):
-                        encoded = [encode_sql_obj(obj) for obj in videos]
-                        query = list(encoded[0].keys())
-                        params = [
-                            tuple(obj[key] for key in query)
-                            for obj in encoded
-                        ]
-                        await cursor.executemany(
-                            f"INSERT OR IGNORE INTO {table} ({', '.join(query)}) values ({', '.join(['?' for _ in query])})",
-                            params
-                        )
-                        return True
-
-                    await self.video_cache.execute(insert_videos)
+                    collector.append(YoutubeVideoCache.of(info=video, channel=channel, first_seen=video["published"]))
 
     async def fetch_user_profile(self, channel: str):
         if channel not in self.profiles:
@@ -345,7 +353,7 @@ class YoutubeListener:
         return None
 
 
-def _fetch_feed_videos(feed_text: str, seen: list[str]) -> list[dict]:
+def _fetch_feed_videos(feed_text: str, seen: set[str]) -> list[dict]:
     root = ElementTree.fromstring(feed_text)
     ns = {
         "atom": "http://www.w3.org/2005/Atom",
