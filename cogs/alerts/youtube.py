@@ -205,7 +205,7 @@ class YoutubeListener:
                     for obj in encoded
                 ]
                 await cursor.executemany(
-                    f"INSERT OR IGNORE INTO {table} ({', '.join(query)}) values ({', '.join(['?' for _ in query])})",
+                    f"REPLACE INTO {table} ({', '.join(query)}) values ({', '.join(['?' for _ in query])})",
                     params
                 )
                 return True
