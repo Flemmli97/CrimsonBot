@@ -22,10 +22,9 @@ async def purge(
         oldest_first: Optional[bool] = None,
         exclude: Optional[int] = None,
 ) -> list[discord.Message]:
-    limit = 1000
+    limit = amount + 1 if amount else 1000
     if not check:
         check = lambda _: True
-        limit = amount + 1 if amount else None
     if exclude:
         curr = check
         check = lambda msg: curr(msg) and msg.id != exclude
